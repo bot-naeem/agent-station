@@ -1,3 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.mypy_cache/
+.pytest_cache/
+
 # Node
 node_modules/
 web/node_modules/
