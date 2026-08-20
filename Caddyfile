@@ -1,0 +1,40 @@
+codingfamily.online {
+    encode zstd gzip
+
+    # API 服务
+    handle_path /api/* {
+        reverse_proxy api:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # WebSocket (实时同步)
+    handle_path /ws {
+        reverse_proxy api:8000 {
+            header_up Host {host}
+            header_up Upgrade {http.request.header.Upgrade}
+            header_up Connection "upgrade"
+        }
+    }
+
+    # 前端应用
+    handle_path /app* {
+        reverse_proxy frontend:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # 根路径重定向到前端
+    handle {
+        redir /app{uri}
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+    }
+}

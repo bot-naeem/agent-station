@@ -1,0 +1,8 @@
+api_url: "https://codingfamily.online/api/v1"
+api_key: "sk-agent-log-xxxxxxxxxxxx"  # 从管理员获取
+local_dir: "~/.agent-logs"            # 本地日志目录
+sync_interval: 60                      # 同步间隔（秒）
+watch: true                            # 是否监听文件变化实时同步
+batch_size: 10                         # 批量同步大小
+retry_max: 5                           # 最大重试次数
+log_level: "INFO"                      # 日志级别

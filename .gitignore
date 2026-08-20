@@ -1,0 +1,36 @@
+# Node
+node_modules/
+web/node_modules/
+dist/
+build/
+*.local
+
+# Docker
+.docker/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+.nyc_output/
+
+# Misc
+*.tgz
+.cache/
