@@ -1,3 +1,4 @@
+"""Todos API routes with multi-agent RBAC"""
 from uuid import UUID
 from typing import Optional
 
@@ -5,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_agent
 from app.core.database import get_db
-from app.core.security import verify_api_key
+from app.models.agent import Agent
 from app.models.todo import Todo
 from app.schemas.todo import (
     TodoCreate,
@@ -24,9 +26,10 @@ router = APIRouter()
 async def create_todo(
     payload: TodoCreate,
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    todo = Todo(**payload.model_dump())
+    """Create a todo for the current agent"""
+    todo = Todo(**payload.model_dump(), agent_id=current_agent.id)
     db.add(todo)
     await db.commit()
     await db.refresh(todo)
@@ -37,9 +40,12 @@ async def create_todo(
 async def list_todos(
     params: TodoListParams = Depends(),
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    query = select(Todo).order_by(desc(Todo.priority), desc(Todo.created_at))
+    """List todos for current agent (or readable agents)"""
+    query = select(Todo).where(Todo.agent_id == current_agent.id).order_by(
+        desc(Todo.priority), desc(Todo.created_at)
+    )
 
     if params.session_id:
         query = query.where(Todo.session_id == params.session_id)
@@ -68,9 +74,11 @@ async def list_todos(
 async def get_todo(
     todo_id: UUID,
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    result = await db.execute(select(Todo).where(Todo.id == todo_id))
+    result = await db.execute(
+        select(Todo).where(Todo.id == todo_id, Todo.agent_id == current_agent.id)
+    )
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -82,9 +90,11 @@ async def update_todo(
     todo_id: UUID,
     payload: TodoUpdate,
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    result = await db.execute(select(Todo).where(Todo.id == todo_id))
+    result = await db.execute(
+        select(Todo).where(Todo.id == todo_id, Todo.agent_id == current_agent.id)
+    )
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
@@ -102,9 +112,11 @@ async def update_todo(
 async def batch_update_todos(
     payload: TodoBatchUpdate,
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    result = await db.execute(select(Todo).where(Todo.id.in_(payload.ids)))
+    result = await db.execute(
+        select(Todo).where(Todo.id.in_(payload.ids), Todo.agent_id == current_agent.id)
+    )
     todos = result.scalars().all()
 
     updated = 0
@@ -123,9 +135,11 @@ async def batch_update_todos(
 async def delete_todo(
     todo_id: UUID,
     db: AsyncSession = Depends(get_db),
-    api_key: str = Depends(verify_api_key),
+    current_agent: Agent = Depends(get_current_agent),
 ):
-    result = await db.execute(select(Todo).where(Todo.id == todo_id))
+    result = await db.execute(
+        select(Todo).where(Todo.id == todo_id, Todo.agent_id == current_agent.id)
+    )
     todo = result.scalar_one_or_none()
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")

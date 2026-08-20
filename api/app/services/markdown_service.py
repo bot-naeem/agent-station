@@ -5,6 +5,7 @@ from datetime import date, datetime
 from uuid import UUID, uuid4
 from pathlib import Path
 from typing import Optional
+from app.models.agent import Agent
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +30,7 @@ class MarkdownService:
     def _compute_hash(self, content: str) -> str:
         return hashlib.sha256(content.encode()).hexdigest()
 
-    async def create(self, payload: MarkdownLogCreate) -> MarkdownLogDetailResponse:
+    async def create(self, payload: MarkdownLogCreate, current_agent: Optional[Agent] = None) -> MarkdownLogDetailResponse:
         # 解析 markdown
         parsed = parse_markdown(payload.content)
         front_matter = parsed.get("front_matter", {})
@@ -81,10 +82,14 @@ class MarkdownService:
         # 估算 token
         tokens_estimate = len(content_without_fm) // 4  # 粗略估算
 
+        # 获取 agent_id
+        agent_id = current_agent.id if current_agent else None
+
         # 创建记录
         markdown_log = MarkdownLog(
             session_id=session_id,
             agent_type=payload.agent_type,
+            agent_id=agent_id,
             log_date=log_date,
             file_path=file_path,
             file_hash=file_hash,

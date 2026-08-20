@@ -22,7 +22,7 @@ class MarkdownFrontMatter(BaseModel):
 class MarkdownLogCreate(BaseModel):
     content: str = Field(..., min_length=1)
     session_id: Optional[UUID] = None
-    agent_type: str = Field(..., min_length=1, max_length=50)
+    agent_type: Optional[str] = Field(None, max_length=50)
     log_date: Optional[date] = None
     front_matter: Optional[MarkdownFrontMatter] = None
 
@@ -39,6 +39,7 @@ class MarkdownLogResponse(BaseModel):
 
     id: UUID
     session_id: Optional[UUID]
+    agent_id: Optional[UUID]
     agent_type: str
     log_date: date
     file_path: str
@@ -56,6 +57,7 @@ class MarkdownLogListResponse(BaseModel):
 
     id: UUID
     session_id: Optional[UUID]
+    agent_id: Optional[UUID]
     agent_type: str
     log_date: date
     file_path: str
@@ -67,6 +69,7 @@ class MarkdownLogListResponse(BaseModel):
 
 class MarkdownLogDetailResponse(MarkdownLogResponse):
     content: str
+    agent_id: Optional[UUID] = None
 
 
 class MarkdownLogSearchParams(BaseModel):

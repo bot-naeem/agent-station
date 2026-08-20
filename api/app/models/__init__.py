@@ -3,6 +3,7 @@ from app.models.session import Session
 from app.models.markdown_log import MarkdownLog
 from app.models.todo import Todo
 from app.models.agent_log import AgentLog
+from app.models.agent import Agent, AgentPermission
 
 __all__ = [
     "Base",
@@ -12,4 +13,6 @@ __all__ = [
     "MarkdownLog",
     "Todo",
     "AgentLog",
+    "Agent",
+    "AgentPermission",
 ]

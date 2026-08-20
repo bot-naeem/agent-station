@@ -30,6 +30,15 @@ from app.schemas.rag import (
     RAGChatMessage,
     RAGChatRequest,
 )
+from app.schemas.agent import (
+    AgentCreate,
+    AgentUpdate,
+    AgentPermissionUpdate,
+    AgentResponse,
+    AgentListResponse,
+    AgentCreate as AgentCreateSchema,
+    AgentUpdate as AgentUpdateSchema,
+)
 
 __all__ = [
     "BaseSchema",
@@ -56,4 +65,9 @@ __all__ = [
     "RAGQueryResponse",
     "RAGChatMessage",
     "RAGChatRequest",
+    "AgentCreate",
+    "AgentUpdate",
+    "AgentPermissionUpdate",
+    "AgentResponse",
+    "AgentListResponse",
 ]
