@@ -20,7 +20,7 @@ class Session(Base, UUIDMixin, TimestampMixin):
     
     # Agent relationship
     agent_id: Mapped[uuid.UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True, index=True
+        PG_UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True, index=True
     )
     agent: Mapped["Agent"] = relationship("Agent", back_populates="sessions", lazy="selectin")
     markdown_logs: Mapped[list["MarkdownLog"]] = relationship(

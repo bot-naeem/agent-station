@@ -21,6 +21,7 @@ class MarkdownFrontMatter(BaseModel):
 
 class MarkdownLogCreate(BaseModel):
     content: str = Field(..., min_length=1)
+    title: Optional[str] = Field(None, max_length=300)
     session_id: Optional[UUID] = None
     agent_type: Optional[str] = Field(None, max_length=50)
     log_date: Optional[date] = None
@@ -41,6 +42,7 @@ class MarkdownLogResponse(BaseModel):
     session_id: Optional[UUID]
     agent_id: Optional[UUID]
     agent_type: str
+    agent_name: Optional[str] = None
     log_date: date
     file_path: str
     file_hash: Optional[str]
@@ -59,6 +61,7 @@ class MarkdownLogListResponse(BaseModel):
     session_id: Optional[UUID]
     agent_id: Optional[UUID]
     agent_type: str
+    agent_name: Optional[str] = None
     log_date: date
     file_path: str
     title: Optional[str]
@@ -74,6 +77,7 @@ class MarkdownLogDetailResponse(MarkdownLogResponse):
 
 class MarkdownLogSearchParams(BaseModel):
     agent_type: Optional[str] = None
+    agent_name: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     tags: Optional[list[str]] = None
@@ -83,10 +87,9 @@ class MarkdownLogSearchParams(BaseModel):
     page_size: int = Field(20, ge=1, le=100)
 
 
-class MarkdownCalendarResponse(BaseModel):
-    date: date
+class TagCount(BaseModel):
+    tag: str
     count: int
-    agents: dict[str, int]
 
 
 class MarkdownStatsResponse(BaseModel):
@@ -95,4 +98,4 @@ class MarkdownStatsResponse(BaseModel):
     total_chars: int
     by_agent: dict[str, int]
     by_date: dict[str, int]
-    top_tags: list[dict[str, int]]
+    top_tags: list[TagCount]

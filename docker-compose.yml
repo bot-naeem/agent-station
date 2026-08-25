@@ -13,18 +13,6 @@ services:
       timeout: 5s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    volumes:
-      - qdrant:/qdrant/storage
-    ports:
-      - "127.0.0.1:6333:6333"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     volumes:
@@ -38,7 +26,6 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - QDRANT_URL=${QDRANT_URL}
       - REDIS_URL=${REDIS_URL}
     volumes:
       - markdown-data:/data/markdown
@@ -47,28 +34,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      qdrant:
-        condition: service_healthy
       redis:
         condition: service_healthy
     deploy:
       resources:
         limits:
           memory: 1G
-
-  worker:
-    build: ./api
-    command: celery -A app.tasks.celery_app worker -l info -Q vectorize,default
-    env_file: .env
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - QDRANT_URL=${QDRANT_URL}
-      - REDIS_URL=${REDIS_URL}
-    volumes:
-      - markdown-data:/data/markdown
-    depends_on:
-      - redis
-      - qdrant
 
   frontend:
     build:
@@ -96,6 +67,5 @@ services:
 
 volumes:
   pgdata:
-  qdrant:
   redis:
   markdown-data:

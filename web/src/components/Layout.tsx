@@ -1,20 +1,29 @@
 import { Outlet, Link, useLocation } from '@tanstack/react-router'
-import { LayoutDashboard, Calendar, List, Bot, CheckSquare, GitBranch, Menu, X } from 'lucide-react'
+import { LayoutDashboard, List, Bot, CheckSquare, Menu, X, Shield } from 'lucide-react'
 import { useState } from 'react'
 import { clsx } from 'clsx'
 
 const navigation = [
   { name: '仪表盘', href: '/', icon: LayoutDashboard },
-  { name: '日志日历', href: '/logs', icon: Calendar },
-  { name: '日志列表', href: '/logs/list', icon: List },
-  { name: 'RAG 问答', href: '/rag', icon: Bot },
+  { name: '日志列表', href: '/logs', icon: List },
+  { name: '问答', href: '/rag', icon: Bot },
   { name: '待办事项', href: '/todos', icon: CheckSquare },
-  { name: '会话时间轴', href: '/sessions', icon: GitBranch },
+  { name: 'Agent 管理', href: '/agents', icon: Shield },
 ]
 
 export function Layout() {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const isLogin = location.pathname === '/login'
+
+  if (isLogin) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Outlet />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

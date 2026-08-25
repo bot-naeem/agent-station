@@ -33,8 +33,15 @@ class MarkdownService:
     async def create(self, payload: MarkdownLogCreate, current_agent: Optional[Agent] = None) -> MarkdownLogDetailResponse:
         # 解析 markdown
         parsed = parse_markdown(payload.content)
-        front_matter = parsed.get("front_matter", {})
+        # 合并 front matter：API 显式传入的为底，content 内嵌 YAML 覆盖
+        payload_fm = {}
+        if payload.front_matter is not None:
+            payload_fm = payload.front_matter.model_dump(exclude_none=True)
+        front_matter = {**payload_fm, **parsed.get("front_matter", {})}
         content_without_fm = parsed.get("content", payload.content)
+
+        # 标题优先级：显式传入 > content 首个 # 标题 > front matter.title
+        title = payload.title or parsed.get("title") or front_matter.get("title")
 
         # 确定日期
         log_date = payload.log_date or date.today()
@@ -94,7 +101,7 @@ class MarkdownService:
             file_path=file_path,
             file_hash=file_hash,
             front_matter=front_matter,
-            title=front_matter.get("title") or parsed.get("title"),
+            title=title,
             summary=parsed.get("summary"),
             tokens_estimate=tokens_estimate,
         )
@@ -103,8 +110,6 @@ class MarkdownService:
         await self.db.refresh(markdown_log)
 
         # 异步向量化
-        from app.tasks.vectorize import vectorize_markdown
-        vectorize_markdown.delay(str(markdown_log.id))
 
         return await self.get_by_id(markdown_log.id)
 
@@ -163,8 +168,6 @@ class MarkdownService:
             log.tokens_estimate = len(parsed.get("content", "")) // 4
 
             # 触发重新向量化
-            from app.tasks.vectorize import vectorize_markdown
-            vectorize_markdown.delay(str(log.id))
 
         if "title" in update_data:
             log.title = update_data["title"]

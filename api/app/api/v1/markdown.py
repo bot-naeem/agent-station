@@ -12,10 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import get_db
-from app.api.deps import get_current_agent, require_permission, require_write_access
+from app.api.deps import get_current_agent_from_api_key, get_current_agent_or_admin, require_permission, require_write_access
 from app.models.markdown_log import MarkdownLog
 from app.models.session import Session
 from app.models.agent import Agent, AgentPermission
+from app.models.admin_user import AdminUser
 from app.schemas.markdown import (
     MarkdownLogCreate,
     MarkdownLogUpdate,
@@ -23,12 +24,33 @@ from app.schemas.markdown import (
     MarkdownLogListResponse,
     MarkdownLogDetailResponse,
     MarkdownLogSearchParams,
-    MarkdownCalendarResponse,
     MarkdownStatsResponse,
 )
 from app.schemas.common import PaginatedResponse
 from app.services.markdown_service import MarkdownService
-from app.tasks.vectorize import vectorize_markdown
+from typing import Union
+
+def get_agent_type(agent: Union[Agent, AdminUser]) -> str:
+    """Get agent_type from Agent or AdminUser"""
+    if isinstance(agent, AdminUser):
+        return "admin"
+    return agent.agent_type
+
+def has_permission(agent, perm) -> bool:
+    """Check permission for Agent or AdminUser"""
+    if isinstance(agent, AdminUser):
+        return True
+    return agent.has_permission(perm)
+
+def get_readable_agent_ids(agent) -> list:
+    """Get readable agent IDs for Agent or AdminUser"""
+    if isinstance(agent, AdminUser):
+        return None  # Admin can read all
+    import json
+    readable = json.loads(agent.readable_agent_ids) if agent.readable_agent_ids else []
+    return readable
+
+CurrentAgent = Union[Agent, AdminUser]
 
 router = APIRouter()
 
@@ -37,17 +59,18 @@ router = APIRouter()
 async def create_markdown_log(
     payload: MarkdownLogCreate,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_write_access()),
+    current_agent = Depends(require_write_access()),
 ):
     """Create a markdown log entry for the current agent"""
     # Override agent_type with current agent's type
-    payload.agent_type = current_agent.agent_type
+    from app.api.deps import get_current_agent_from_api_key
+    from app.api.deps import require_write_access as require_write_access_dep
+    # Use the agent's actual type, or "admin" for admin users
+    agent_type = getattr(current_agent, 'agent_type', 'admin')
+    payload.agent_type = payload.agent_type or agent_type
     service = MarkdownService(db)
     log = await service.create(payload, current_agent=current_agent)
-    
-    # Trigger vectorization
-    vectorize_markdown.delay(str(log.id))
-    
+
     return log
 
 
@@ -55,19 +78,37 @@ async def create_markdown_log(
 async def list_markdown_logs(
     params: MarkdownLogSearchParams = Depends(),
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """List markdown logs with agent-based filtering"""
+    from app.models.agent import AgentPermission
     query = select(MarkdownLog).order_by(desc(MarkdownLog.log_date), desc(MarkdownLog.created_at))
     
+    # Agent-based filtering - handle both Agent and AdminUser
+    def has_perm(agent, perm):
+        if isinstance(agent, AdminUser):
+            return True
+        return agent.has_permission(perm)
+    
+    agent_type = getattr(current_agent, 'agent_type', 'admin')
+    readable_ids = getattr(current_agent, 'readable_agent_ids', None)
+
+    # 解析 agent_name 精确过滤（display_name/name 大小写不敏感精确匹配）
+    from app.api.deps import resolve_agent_names_to_ids
+    name_filtered_ids = None
+    if params.agent_name and params.agent_name.strip():
+        name_filtered_ids = await resolve_agent_names_to_ids(db, [params.agent_name])
+
     # Agent-based filtering
-    if current_agent.has_permission(AgentPermission.READ_ALL):
+    if has_perm(current_agent, AgentPermission.READ_ALL):
         # Can read all agents - use params filter if provided
-        if params.agent_type:
+        if name_filtered_ids is not None:
+            query = query.where(MarkdownLog.agent_id.in_(name_filtered_ids))
+        elif params.agent_type:
             query = query.where(MarkdownLog.agent_type == params.agent_type)
-    elif current_agent.has_permission(AgentPermission.READ_SPECIFIC):
+    elif has_perm(current_agent, AgentPermission.READ_SPECIFIC):
         import json
-        readable = json.loads(current_agent.readable_agent_ids)
+        readable = json.loads(readable_ids) if readable_ids else []
         if readable:
             # Get agent IDs that current agent can read
             from app.models.agent import Agent as AgentModel
@@ -75,7 +116,12 @@ async def list_markdown_logs(
                 select(AgentModel.id).where(AgentModel.name.in_(readable))
             )
             readable_ids = [str(r[0]) for r in readable_agents.all()]
-            query = query.where(MarkdownLog.agent_id.in_(readable_ids))
+            if name_filtered_ids is not None:
+                # 请求的名字必须在可读白名单内，交集为空则返回空
+                allowed = set(readable_ids) & {str(i) for i in name_filtered_ids}
+                query = query.where(MarkdownLog.agent_id.in_(allowed) if allowed else False)
+            else:
+                query = query.where(MarkdownLog.agent_id.in_(readable_ids))
         else:
             query = query.where(MarkdownLog.agent_id == current_agent.id)
     else:
@@ -120,82 +166,31 @@ async def list_markdown_logs(
     )
 
 
-@router.get("/markdown/calendar", response_model=List[MarkdownCalendarResponse])
-async def get_markdown_calendar(
-    year: int = Query(..., ge=2020, le=2030),
-    month: int = Query(..., ge=1, le=12),
-    agent_type: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
-):
-    """Get calendar view with agent-based filtering"""
-    from calendar import monthrange
-
-    start_date = date(year, month, 1)
-    end_date = date(year, month, monthrange(year, month)[1])
-
-    # Build base query with agent filtering
-    base_query = select(MarkdownLog).where(MarkdownLog.log_date.between(start_date, end_date))
-    
-    if current_agent.has_permission(AgentPermission.READ_ALL):
-        if agent_type:
-            base_query = base_query.where(MarkdownLog.agent_type == agent_type)
-    elif current_agent.has_permission(AgentPermission.READ_SPECIFIC):
-        import json
-        readable = json.loads(current_agent.readable_agent_ids)
-        if readable:
-            from app.models.agent import Agent as AgentModel
-            readable_agents = await db.execute(
-                select(AgentModel.id).where(AgentModel.name.in_(readable))
-            )
-            readable_ids = [str(r[0]) for r in readable_agents.all()]
-            base_query = base_query.where(MarkdownLog.agent_id.in_(readable_ids))
-        else:
-            base_query = base_query.where(MarkdownLog.agent_id == current_agent.id)
-    else:
-        base_query = base_query.where(MarkdownLog.agent_id == current_agent.id)
-
-    query = (
-        select(
-            MarkdownLog.log_date,
-            func.count(MarkdownLog.id).label("count"),
-            func.jsonb_object_agg(MarkdownLog.agent_type, func.count(MarkdownLog.id)).label("agents"),
-        )
-        .select_from(base_query.subquery())
-        .group_by(MarkdownLog.log_date)
-        .order_by(MarkdownLog.log_date)
-    )
-
-    result = await db.execute(query)
-    rows = result.all()
-
-    return [
-        MarkdownCalendarResponse(
-            date=row.log_date,
-            count=row.count,
-            agents=row.agents or {},
-        )
-        for row in rows
-    ]
-
-
 @router.get("/markdown/stats", response_model=MarkdownStatsResponse)
 async def get_markdown_stats(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     agent_type: Optional[str] = Query(None),
+    agent_name: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Get markdown statistics with agent-based filtering"""
     base_query = select(MarkdownLog)
-    
-    if current_agent.has_permission(AgentPermission.READ_ALL):
-        if agent_type:
+
+    # 解析 agent_name 精确过滤
+    from app.api.deps import resolve_agent_names_to_ids
+    name_filtered_ids = None
+    if agent_name and agent_name.strip():
+        name_filtered_ids = await resolve_agent_names_to_ids(db, [agent_name])
+
+    if has_permission(current_agent, AgentPermission.READ_ALL):
+        if name_filtered_ids is not None:
+            base_query = base_query.where(MarkdownLog.agent_id.in_(name_filtered_ids))
+        elif agent_type:
             base_query = base_query.where(MarkdownLog.agent_type == agent_type)
-    elif current_agent.has_permission(AgentPermission.READ_SPECIFIC):
-        import json
-        readable = json.loads(current_agent.readable_agent_ids)
+    elif has_permission(current_agent, AgentPermission.READ_SPECIFIC):
+        readable = get_readable_agent_ids(current_agent)
         if readable:
             from app.models.agent import Agent as AgentModel
             readable_agents = await db.execute(
@@ -246,7 +241,7 @@ async def get_markdown_stats(
 async def get_markdown_log(
     markdown_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Get a specific markdown log with read permission check"""
     service = MarkdownService(db)
@@ -255,10 +250,24 @@ async def get_markdown_log(
         raise HTTPException(status_code=404, detail="Markdown log not found")
     
     # Check read permission
-    if not current_agent.can_read_agent(str(log.agent_id)):
+    if not can_read_agent(current_agent, log.agent_id):
         raise HTTPException(status_code=403, detail="Cannot access this log")
     
     return log
+
+
+def can_read_agent(agent, target_agent_id) -> bool:
+    """Check if agent can read target agent's logs"""
+    if isinstance(agent, AdminUser):
+        return True
+    return agent.can_read_agent(target_agent_id)
+
+
+def can_write_as_agent(agent, target_agent_type) -> bool:
+    """Check if agent can write as target agent type"""
+    if isinstance(agent, AdminUser):
+        return True
+    return agent.can_write_as_agent(target_agent_type)
 
 
 @router.put("/markdown/{markdown_id}", response_model=MarkdownLogResponse)
@@ -266,7 +275,7 @@ async def update_markdown_log(
     markdown_id: UUID,
     payload: MarkdownLogUpdate,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Update a markdown log (only own logs or admin)"""
     service = MarkdownService(db)
@@ -275,7 +284,7 @@ async def update_markdown_log(
         raise HTTPException(status_code=404, detail="Markdown log not found")
     
     # Check write permission (can only update own logs unless admin)
-    if not current_agent.can_write_as_agent(log.agent_type):
+    if not can_write_as_agent(current_agent, log.agent_type):
         raise HTTPException(status_code=403, detail="Cannot update this log")
     
     log = await service.update(markdown_id, payload)
@@ -288,7 +297,7 @@ async def update_markdown_log(
 async def delete_markdown_log(
     markdown_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(require_write_access()),
 ):
     """Delete a markdown log (only own logs or admin)"""
     service = MarkdownService(db)
@@ -297,7 +306,7 @@ async def delete_markdown_log(
         raise HTTPException(status_code=404, detail="Markdown log not found")
     
     # Check write permission
-    if not current_agent.can_write_as_agent(log.agent_type):
+    if not can_write_as_agent(current_agent, log.agent_type):
         raise HTTPException(status_code=403, detail="Cannot delete this log")
     
     success = await service.delete(markdown_id)
@@ -309,7 +318,7 @@ async def delete_markdown_log(
 async def batch_import_markdown(
     files: list[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(require_write_access()),
 ):
     """Batch import markdown files as current agent"""
     service = MarkdownService(db)
@@ -318,7 +327,7 @@ async def batch_import_markdown(
     for file in files:
         try:
             content = (await file.read()).decode("utf-8")
-            payload = MarkdownLogCreate(content=content, agent_type=current_agent.agent_type)
+            payload = MarkdownLogCreate(content=content, agent_type=get_agent_type(current_agent))
             await service.create(payload)
             results["success"] += 1
         except Exception as e:

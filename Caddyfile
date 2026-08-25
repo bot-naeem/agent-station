@@ -1,6 +1,16 @@
 codingfamily.online {
     encode zstd gzip
 
+    # MCP Server (must come before catch-all redirect)
+    handle_path /mcp* {
+        reverse_proxy mcp-server:8080 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
     # API 服务
     handle_path /api/* {
         reverse_proxy api:8000 {

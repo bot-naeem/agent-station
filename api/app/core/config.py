@@ -2,7 +2,6 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-EMBEDDING_KEY_PLACEHOLDER = "<请填入你的SiliconFlow API Key>"
 
 
 class Settings(BaseSettings):
@@ -19,28 +18,13 @@ class Settings(BaseSettings):
     postgres_db: str = "agent_logs"
     database_url: str = "postgresql://agentlog:changeme@postgres:5432/agent_logs"
 
-    # Qdrant
-    qdrant_url: str = "http://qdrant:6333"
-    qdrant_api_key: str = ""
-
     # Redis
     redis_url: str = "redis://redis:6379/0"
 
-    # Embedding (SiliconFlow)
-    embedding_api_url: str = "https://api.siliconflow.cn/v1/embeddings"
-    embedding_api_key: str = ""
-    embedding_model: str = "BAAI/bge-m3"
-    embedding_dim: int = 1024
-    chunk_size: int = 500
-    chunk_overlap: int = 50
-
-    @property
-    def embedding_configured(self) -> bool:
-        """embedding key 是否为有效配置（非空且非占位符）"""
-        return bool(
-            self.embedding_api_key
-            and self.embedding_api_key != EMBEDDING_KEY_PLACEHOLDER
-        )
+    # LLM (MiniMax, Anthropic-compatible protocol)
+    llm_api_base: str = "https://api.minimaxi.com/anthropic"
+    llm_api_key: str = ""
+    llm_model: str = "MiniMax-M3"
 
     # API
     api_secret_key: str = "changeme"

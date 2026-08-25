@@ -27,15 +27,10 @@ async def health_check(
     except Exception:
         db_status = "unhealthy"
 
-    # Check Qdrant
-    qdrant_status = "healthy"
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.get(f"{settings.qdrant_url}/health")
-            if resp.status_code != 200:
-                qdrant_status = "unhealthy"
-    except Exception:
-        qdrant_status = "unhealthy"
+    # Check LLM (MiniMax)
+    llm_status = "healthy"
+    if not settings.llm_api_key:
+        llm_status = "unhealthy"
 
     # Check Redis
     redis_status = "healthy"
@@ -47,7 +42,7 @@ async def health_check(
     except Exception:
         redis_status = "unhealthy"
 
-    overall = "healthy" if all(s == "healthy" for s in [db_status, qdrant_status, redis_status]) else "degraded"
+    overall = "healthy" if all(s == "healthy" for s in [db_status, llm_status, redis_status]) else "degraded"
 
     return HealthResponse(
         status=overall,

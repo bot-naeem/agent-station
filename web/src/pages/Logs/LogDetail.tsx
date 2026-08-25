@@ -109,7 +109,7 @@ export function LogDetail() {
                 </>
               )}
             </button>
-            <Link to={`/logs/list`} className="btn-secondary">
+            <Link to="/logs" className="btn-secondary">
               列表视图
             </Link>
           </div>

@@ -1,20 +1,21 @@
 """Authentication dependencies for multi-agent RBAC"""
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
 from app.models.agent import Agent, AgentPermission
-from app.models.markdown_log import MarkdownLog
+from app.models.admin_user import AdminUser
+from app.core.auth import decode_token
 
 
-async def get_current_agent(
+async def get_current_agent_from_api_key(
     x_api_key: str = Header(..., alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> Agent:
-    """Get current agent from API key"""
+    """Get current agent from API key (for agent CLI)"""
     if not x_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -49,22 +50,83 @@ async def get_current_agent(
     return agent
 
 
-async def get_current_agent_optional(
+async def get_current_admin_from_cookie(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> Optional[AdminUser]:
+    """Get current admin from cookie token (for web UI)"""
+    token = request.cookies.get("admin_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+    
+    if not token:
+        return None
+    
+    payload = decode_token(token)
+    if not payload:
+        return None
+    
+    from uuid import UUID
+    result = await db.execute(
+        select(AdminUser).where(AdminUser.id == UUID(payload["sub"]))
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user or not user.is_active:
+        return None
+    
+    return user
+
+
+async def get_current_agent_or_admin(
+    request: Request,
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
-) -> Optional[Agent]:
-    """Get current agent if API key provided, otherwise return None"""
-    if not x_api_key:
-        return None
-    try:
-        return await get_current_agent(x_api_key, db)
-    except HTTPException:
-        return None
+):
+    """Get current agent from API key OR admin from cookie (for unified API endpoints)"""
+    # Try API key first (for agent CLI)
+    if x_api_key:
+        return await get_current_agent_from_api_key(x_api_key, db)
+    
+    # Try cookie token (for web UI)
+    admin = await get_current_admin_from_cookie(request, db)
+    if admin:
+        return admin
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="API key or login required",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def get_current_unified(
+    request: Request,
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db=Depends(get_db),
+):
+    """Get unified agent/admin interface"""
+    # Try API key first (for agent CLI)
+    if x_api_key:
+        return await get_current_agent_from_api_key(x_api_key, db)
+    
+    # Try cookie token (for web UI)
+    admin = await get_current_admin_from_cookie(request, db)
+    if admin:
+        return admin
+    
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="API key or login required",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def require_permission(permission: AgentPermission):
-    """Dependency factory to require a specific permission"""
-    async def check_permission(agent: Agent = Depends(get_current_agent)) -> Agent:
+    """Dependency factory to require a specific permission (for agents)"""
+    async def check_permission(agent = Depends(get_current_agent_from_api_key)) -> Agent:
         if not agent.has_permission(permission):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -75,8 +137,8 @@ def require_permission(permission: AgentPermission):
 
 
 def require_write_access():
-    """Dependency to verify agent can write as their own agent_type"""
-    async def check_write_access(agent: Agent = Depends(get_current_agent)) -> Agent:
+    """Dependency to verify agent can write as their own agent_type (for agents)"""
+    async def check_write_access(agent = Depends(get_current_agent_from_api_key)) -> Agent:
         if not agent.can_write_as_agent(agent.agent_type):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -87,8 +149,8 @@ def require_write_access():
 
 
 def require_read_access(target_agent_id: str):
-    """Dependency to verify agent can read another agent's logs"""
-    async def check_read_access(agent: Agent = Depends(get_current_agent)) -> Agent:
+    """Dependency to verify agent can read another agent's logs (for agents)"""
+    async def check_read_access(agent = Depends(get_current_agent_from_api_key)) -> Agent:
         if not agent.can_read_agent(target_agent_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -101,7 +163,7 @@ def require_read_access(target_agent_id: str):
 async def get_agent_by_id(
     agent_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_from_api_key),
 ) -> Agent:
     """Get agent by ID with read permission check"""
     from app.models.agent import Agent as AgentModel
@@ -115,3 +177,16 @@ async def get_agent_by_id(
         raise HTTPException(status_code=403, detail="Cannot access this agent")
     
     return target_agent
+
+async def resolve_agent_names_to_ids(db: AsyncSession, names: list[str]) -> list[UUID]:
+    """Resolve exact agent display_name/name (case-insensitive) to a list of agent IDs"""
+    cleaned = [n.strip() for n in names if n and n.strip()]
+    if not cleaned:
+        return []
+    from sqlalchemy import or_, func
+    conditions = []
+    for n in cleaned:
+        conditions.append(func.lower(Agent.display_name) == n.lower())
+        conditions.append(func.lower(Agent.name) == n.lower())
+    result = await db.execute(select(Agent.id).where(or_(*conditions)))
+    return [row[0] for row in result.all()]

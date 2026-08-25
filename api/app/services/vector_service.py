@@ -110,15 +110,18 @@ class VectorService:
             embeddings.append(emb)
 
         # 写入 Qdrant
+        import uuid as _uuid
         points = []
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            point_id = f"{markdown_id}-{i}"
+            # 确定性 UUID（同一日志同一块重跑时覆盖旧向量，且始终是 Qdrant 合法的 UUID 格式）
+            point_id = str(_uuid.uuid5(_uuid.NAMESPACE_URL, f"{markdown_id}-chunk-{i}"))
             points.append(
                 PointStruct(
                     id=point_id,
                     vector=embedding,
                     payload={
                         "markdown_log_id": str(markdown_id),
+                        "agent_id": str(log.agent_id) if log.agent_id else None,
                         "session_id": str(log.session_id) if log.session_id else None,
                         "agent_type": log.agent_type,
                         "date": str(log.log_date),
@@ -141,8 +144,11 @@ class VectorService:
         session_id: Optional[UUID] = None,
         agent_type: Optional[str] = None,
         use_mmr: bool = False,
+        agent_ids: Optional[list[str]] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
     ) -> list[RAGSource]:
-        """向量搜索"""
+        """向量搜索。支持按 agent_id 列表和日期范围（YYYY-MM-DD，字典序比较）过滤"""
         await self.ensure_collection()
 
         # 获取查询向量
@@ -161,14 +167,36 @@ class VectorService:
 
         query_filter = Filter(must=must_conditions) if must_conditions else None
 
+        # agent_ids / 日期范围在取回后过滤（日期为字符串，Python 字典序即时间序）
+        need_post_filter = bool(agent_ids) or bool(start_date or end_date)
+        fetch_limit = top_k * (4 if need_post_filter else 1)
+
+        async def _post_filter(points: list) -> list:
+            out = []
+            for hit in points:
+                p = hit.payload or {}
+                if agent_ids and p.get("agent_id") not in {str(i) for i in agent_ids}:
+                    continue
+                d = p.get("date") or ""
+                if start_date and d < start_date:
+                    continue
+                if end_date and d > end_date:
+                    continue
+                out.append(hit)
+                if len(out) >= top_k * (3 if use_mmr else 1):
+                    break
+            return out
+
         if use_mmr:
             # MMR 搜索（需要自定义实现或使用 Qdrant 的 recommend）
-            search_result = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_vector,
-                query_filter=query_filter,
-                limit=top_k * 3,
-                score_threshold=score_threshold,
+            search_result = await _post_filter(
+                self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=query_vector,
+                    query_filter=query_filter,
+                    limit=fetch_limit,
+                    score_threshold=score_threshold,
+                ).points
             )
             # 简单的 MMR 实现：去重相似度高的结果
             sources = []
@@ -190,12 +218,14 @@ class VectorService:
                 )
             return sources
         else:
-            search_result = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_vector,
-                query_filter=query_filter,
-                limit=top_k,
-                score_threshold=score_threshold,
+            search_result = await _post_filter(
+                self.client.query_points(
+                    collection_name=self.collection_name,
+                    query=query_vector,
+                    query_filter=query_filter,
+                    limit=fetch_limit,
+                    score_threshold=score_threshold,
+                ).points
             )
 
             sources = []

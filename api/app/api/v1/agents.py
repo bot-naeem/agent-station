@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_agent, require_permission
+from app.api.deps import get_current_agent_or_admin, require_permission
 from app.models.agent import Agent, AgentPermission
+from app.models.admin_user import AdminUser
 from app.schemas.agent import (
     AgentCreate,
     AgentUpdate,
@@ -21,11 +22,35 @@ from app.core.database import get_db
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 
+async def get_current_admin(
+    current_user = Depends(get_current_agent_or_admin)
+) -> AdminUser:
+    """Get current admin user (must be AdminUser with ADMIN permission)"""
+    if isinstance(current_user, AdminUser):
+        if not current_user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin permission required"
+            )
+        return current_user
+    else:
+        # Agent user - check if they have admin permission
+        if not current_user.has_permission(AgentPermission.ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin permission required"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Agent users cannot manage other agents"
+        )
+
+
 @router.post("", response_model=AgentResponse, status_code=201)
 async def create_agent(
     payload: AgentCreate,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Create a new agent (admin only)"""
     # Check if name already exists
@@ -65,7 +90,7 @@ async def list_agents(
     page_size: int = Query(20, ge=1, le=100),
     is_active: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """List all agents (admin only)"""
     query = select(Agent).order_by(Agent.created_at.desc())
@@ -93,7 +118,7 @@ async def list_agents(
 
 @router.get("/me", response_model=AgentResponse)
 async def get_current_agent_info(
-    current_agent: Agent = Depends(get_current_agent),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Get current agent's info"""
     return current_agent.to_dict()
@@ -103,7 +128,7 @@ async def get_current_agent_info(
 async def get_agent(
     agent_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Get agent by ID (admin only)"""
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -118,7 +143,7 @@ async def update_agent(
     agent_id: UUID,
     payload: AgentUpdate,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Update agent (admin only)"""
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -127,7 +152,7 @@ async def update_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
     
     # Prevent self-deactivation
-    if agent.id == current_agent.id and payload.is_active is False:
+    if agent.id == current_admin.id and payload.is_active is False:
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
     
     update_data = payload.model_dump(exclude_unset=True)
@@ -147,7 +172,7 @@ async def update_agent_permissions(
     agent_id: UUID,
     payload: AgentPermissionUpdate,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Update agent permissions (admin only)"""
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -184,7 +209,7 @@ async def update_agent_permissions(
 async def rotate_api_key(
     agent_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Rotate agent's API key (admin only)"""
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -195,6 +220,7 @@ async def rotate_api_key(
     # Generate new key
     new_key = Agent.generate_api_key()
     agent.api_key_hash = Agent.hash_api_key(new_key)
+    agent.set_plaintext_key(new_key)
     
     await db.commit()
     await db.refresh(agent)
@@ -206,10 +232,10 @@ async def rotate_api_key(
 async def delete_agent(
     agent_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent: Agent = Depends(require_permission(AgentPermission.ADMIN)),
+    current_admin: AdminUser = Depends(get_current_admin),
 ):
     """Delete agent (admin only)"""
-    if agent_id == current_agent.id:
+    if agent_id == current_admin.id:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
     
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
@@ -219,3 +245,11 @@ async def delete_agent(
     
     await db.delete(agent)
     await db.commit()
+
+
+@router.get("/me", response_model=AgentResponse)
+async def get_current_agent_info(
+    current_agent = Depends(get_current_agent_or_admin),
+):
+    """Get current agent's info"""
+    return current_agent.to_dict()

@@ -9,15 +9,12 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000,
+  withCredentials: true, // 重要：允许发送 Cookie
 })
 
-// 请求拦截器 - 添加 API Key
+// 请求拦截器 - 不再需要手动添加 API Key，改用 Cookie 认证
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const apiKey = localStorage.getItem('api_key') || import.meta.env.VITE_API_KEY
-    if (apiKey) {
-      config.headers['X-API-Key'] = apiKey
-    }
     return config
   },
   (error) => Promise.reject(error)
@@ -28,8 +25,10 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // 未授权，可选：清除本地存储、跳转登录
-      console.error('API Key invalid or missing')
+      // 未授权，清除本地状态、跳转登录
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -48,6 +47,7 @@ export interface MarkdownLog {
   id: string
   session_id: string | null
   agent_type: string
+  agent_name?: string | null
   log_date: string
   file_path: string
   file_hash: string | null
@@ -69,12 +69,6 @@ export interface MarkdownLogSearchParams {
   session_id?: string
   page?: number
   page_size?: number
-}
-
-export interface MarkdownCalendarItem {
-  date: string
-  count: number
-  agents: Record<string, number>
 }
 
 export interface MarkdownStats {
@@ -138,16 +132,13 @@ export const markdownApi = {
   list: async (params: MarkdownLogSearchParams) =>
     (await api.get<PaginatedResponse<MarkdownLog>>('/markdown', { params })).data,
 
-  calendar: async (year: number, month: number) =>
-    (await api.get<MarkdownCalendarItem[]>('/markdown/calendar', { params: { year, month } })).data,
-
   stats: async (start_date?: string, end_date?: string) =>
     (await api.get<MarkdownStats>('/markdown/stats', { params: { start_date, end_date } })).data,
 
   get: async (id: string) =>
     (await api.get<MarkdownLog>(`/markdown/${id}`)).data,
 
-  update: async (id: string, data: Partial<MarkdownLog>) =>
+  update: async (id: string, data: Partial<Pick<MarkdownLog, 'title' | 'summary' | 'content'> & { tags?: string[] }>) =>
     (await api.put<MarkdownLog>(`/markdown/${id}`, data)).data,
 
   delete: async (id: string) => {
@@ -198,4 +189,93 @@ export const ragApi = {
 export const healthApi = {
   check: async () =>
     (await api.get('/health/public')).data,
+}
+
+export const agentApi = {
+  list: async (params?: { page?: number; page_size?: number; is_active?: boolean }) =>
+    (await api.get<PaginatedResponse<AgentResponse>>('/agents', { params })).data,
+
+  get: async (id: string) =>
+    (await api.get<AgentResponse>(`/agents/${id}`)).data,
+
+  me: async () =>
+    (await api.get<AgentResponse>(`/agents/me`)).data,
+
+  create: async (data: AgentCreate) =>
+    (await api.post<AgentResponse>('/agents', data)).data,
+
+  update: async (id: string, data: AgentUpdate) =>
+    (await api.patch<AgentResponse>(`/agents/${id}`, data)).data,
+
+  updatePermissions: async (id: string, data: { permissions: string[]; readable_agent_ids?: string[] }) =>
+    (await api.patch<AgentResponse>(`/agents/${id}/permissions`, data)).data,
+
+  rotateKey: async (id: string) =>
+    (await api.post<AgentResponse>(`/agents/${id}/rotate-key`)).data,
+
+  delete: async (id: string) => {
+    await api.delete(`/agents/${id}`)
+  },
+}
+
+export interface AgentResponse {
+  id: string
+  name: string
+  display_name: string
+  description: string | null
+  agent_type: string
+  permissions: string[]
+  readable_agent_ids: string[]
+  is_active: boolean
+  created_at: string
+  last_used_at: string | null
+  api_key?: string
+}
+
+export interface AgentCreate {
+  name: string
+  display_name: string
+  description?: string
+  permissions: string[]
+  readable_agent_ids: string[]
+  is_active: boolean
+}
+
+export interface AgentUpdate {
+  display_name?: string
+  description?: string
+  agent_type?: string
+  permissions?: string[]
+  readable_agent_ids?: string[]
+  is_active?: boolean
+}
+
+export interface LoginRequest {
+  username: string
+  password: string
+}
+
+export interface LoginResponse {
+  user: AdminUserResponse
+  token: string
+}
+
+export interface AdminUserResponse {
+  id: string
+  username: string
+  display_name: string
+  email: string | null
+  is_superuser: boolean
+  is_active: boolean
+}
+
+export const authApi = {
+  login: async (data: LoginRequest) =>
+    (await api.post<{ user: AdminUserResponse; token: string }>('/auth/login', data)).data,
+
+  logout: async () =>
+    (await api.post('/auth/logout')).data,
+
+  me: async () =>
+    (await api.get<{ id: string; username: string; display_name: string; email: string | null; is_superuser: boolean; is_active: boolean }>('/auth/me')).data,
 }

@@ -13,7 +13,6 @@ from app.schemas.markdown import (
     MarkdownLogListResponse,
     MarkdownLogDetailResponse,
     MarkdownLogSearchParams,
-    MarkdownCalendarResponse,
     MarkdownStatsResponse,
 )
 from app.schemas.todo import (
@@ -53,7 +52,6 @@ __all__ = [
     "MarkdownLogListResponse",
     "MarkdownLogDetailResponse",
     "MarkdownLogSearchParams",
-    "MarkdownCalendarResponse",
     "MarkdownStatsResponse",
     "TodoCreate",
     "TodoUpdate",

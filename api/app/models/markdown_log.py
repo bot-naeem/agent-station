@@ -30,9 +30,16 @@ class MarkdownLog(Base, UUIDMixin, TimestampMixin):
     
     # Agent relationship
     agent_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True, index=True
+        PG_UUID(as_uuid=True), ForeignKey("agents.id", ondelete="SET NULL"), nullable=True, index=True
     )
     agent: Mapped["Agent"] = relationship("Agent", back_populates="markdown_logs", lazy="selectin")
+
+    @property
+    def agent_name(self) -> str | None:
+        """Resolved Agent display name (falls back to name, then agent_type)."""
+        if self.agent:
+            return self.agent.display_name or self.agent.name
+        return None
 
     __table_args__ = (
         UniqueConstraint("session_id", "agent_type", "log_date", name="uq_markdown_session_agent_date"),

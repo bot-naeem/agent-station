@@ -1,12 +1,14 @@
 import { createRouter, createRootRoute, createRoute } from '@tanstack/react-router'
 import { Dashboard } from './pages/Dashboard'
-import { LogsCalendar } from './pages/Logs/LogsCalendar'
 import { LogsList } from './pages/Logs/LogsList'
+import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
 import { Chat } from './pages/RAG/Chat'
 import { TodoBoard } from './pages/Todos/TodoBoard'
-import { Timeline } from './pages/Sessions/Timeline'
+import { Agents } from './pages/Agents'
+import { Login } from './pages/Login'
 import { Layout } from './components/Layout'
+import { AuthLayout } from './components/AuthLayout'
 
 const rootRoute = createRootRoute({
   component: Layout,
@@ -18,16 +20,16 @@ const dashboardRoute = createRoute({
   component: Dashboard,
 })
 
-const logsCalendarRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/logs',
-  component: LogsCalendar,
-})
-
 const logsListRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/logs/list',
+  path: '/logs',
   component: LogsList,
+})
+
+const logEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/logs/editor/$logId',
+  component: LogEditor,
 })
 
 const logDetailRoute = createRoute({
@@ -48,20 +50,27 @@ const todosRoute = createRoute({
   component: TodoBoard,
 })
 
-const timelineRoute = createRoute({
+const agentsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/sessions',
-  component: Timeline,
+  path: '/agents',
+  component: Agents,
+})
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: Login,
 })
 
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
-  logsCalendarRoute,
   logsListRoute,
+  logEditorRoute,
   logDetailRoute,
   ragRoute,
   todosRoute,
-  timelineRoute,
+  agentsRoute,
+  loginRoute,
 ])
 
 export const router = createRouter({

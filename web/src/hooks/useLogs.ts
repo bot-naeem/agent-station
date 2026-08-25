@@ -9,14 +9,6 @@ export function useMarkdownLogs(params: MarkdownLogSearchParams = {}) {
   })
 }
 
-export function useMarkdownCalendar(year: number, month: number) {
-  return useQuery({
-    queryKey: ['markdown-calendar', year, month],
-    queryFn: () => markdownApi.calendar(year, month),
-    enabled: !!year && !!month,
-  })
-}
-
 export function useMarkdownStats(start_date?: string, end_date?: string) {
   return useQuery({
     queryKey: ['markdown-stats', start_date, end_date],

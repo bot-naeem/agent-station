@@ -105,9 +105,11 @@ class Agent(Base):
         """Verify provided API key against stored hash"""
         return self.api_key_hash == self.hash_api_key(api_key)
 
-    def has_permission(self, perm: AgentPermission) -> bool:
-        """Check if agent has a specific permission"""
-        return perm.value in self.permissions
+    def has_permission(self, perm) -> bool:
+        """Check if agent has a specific permission (accepts AgentPermission enum or plain string)"""
+        from enum import Enum as _Enum
+        value = perm.value if isinstance(perm, _Enum) else str(perm)
+        return value in self.permissions
 
     def can_read_agent(self, target_agent_id: str) -> bool:
         """Check if this agent can read another agent's logs"""
@@ -127,6 +129,17 @@ class Agent(Base):
 
     def to_dict(self, include_key: bool = False) -> dict:
         """Convert to dict, optionally including plaintext key (only on creation)"""
+        # Ensure readable_agent_ids is always a list
+        readable_ids = self.readable_agent_ids
+        if isinstance(readable_ids, str):
+            import json
+            try:
+                readable_ids = json.loads(readable_ids)
+            except Exception:
+                readable_ids = []
+        elif not isinstance(readable_ids, list):
+            readable_ids = []
+        
         return {
             "id": str(self.id),
             "name": self.name,
@@ -134,7 +147,7 @@ class Agent(Base):
             "description": self.description,
             "agent_type": self.agent_type,
             "permissions": self.permissions,
-            "readable_agent_ids": self.readable_agent_ids,
+            "readable_agent_ids": readable_ids,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_used_at": self.last_used_at.isoformat() if self.last_used_at else None,

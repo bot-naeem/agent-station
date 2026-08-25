@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Calendar, FileText, Bot, CheckSquare, TrendingUp } from 'lucide-react'
+import { FileText, Bot, CheckSquare, TrendingUp } from 'lucide-react'
 import { markdownApi, todoApi } from '../services/api'
 import { format } from 'date-fns'
 import { clsx } from 'clsx'
@@ -112,16 +112,12 @@ export function Dashboard() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">快速操作</h2>
             <div className="space-y-2">
               <a href="/logs" className="btn-secondary w-full justify-start">
-                <Calendar className="h-4 w-4 mr-2" />
-                查看日志日历
-              </a>
-              <a href="/logs/list" className="btn-secondary w-full justify-start">
                 <FileText className="h-4 w-4 mr-2" />
                 浏览日志列表
               </a>
               <a href="/rag" className="btn-primary w-full justify-start">
                 <Bot className="h-4 w-4 mr-2" />
-                RAG 智能问答
+                问答
               </a>
               <a href="/todos" className="btn-secondary w-full justify-start">
                 <CheckSquare className="h-4 w-4 mr-2" />
@@ -158,7 +154,7 @@ export function Dashboard() {
           <div className="card">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">最近日志</h2>
-              <a href="/logs/list" className="text-sm text-primary-600 hover:text-primary-700">查看全部</a>
+              <a href="/logs" className="text-sm text-primary-600 hover:text-primary-700">查看全部</a>
             </div>
             <div className="divide-y divide-gray-100">
               {recentLogs?.items.slice(0, 5).map((log) => (

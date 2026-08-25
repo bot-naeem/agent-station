@@ -1,130 +1,194 @@
-from typing import Optional
-import httpx
+"""Q&A service: filter extraction → SQL full-text retrieval → LLM synthesis (no vector RAG)"""
+import json
+import re
+from typing import Any, Optional
 from uuid import UUID
 
+import httpx
+from sqlalchemy import select, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import get_settings
-from app.services.vector_service import VectorService
-from app.schemas.rag import RAGSource, RAGChatMessage
+from app.models.markdown_log import MarkdownLog
+from app.schemas.rag import RAGSource
 
 settings = get_settings()
 
+FILTER_SYSTEM_PROMPT = (
+    "你是查询解析器。根据用户问题，输出 JSON 对象，字段：\n"
+    '{"start_date": "YYYY-MM-DD 或 null", "end_date": "YYYY-MM-DD 或 null", '
+    '"agent_name": "精确Agent名称或 null", "keywords": ["关键词1", "关键词2"]}\n'
+    "规则：\n"
+    "- 今天是 {today}。'昨天/上周/最近三天'等相对时间换算为具体日期范围\n"
+    "- 提到某个 Agent 的名字时填 agent_name\n"
+    "- keywords 提取 2-4 个用于全文检索的核心词（中文为主）\n"
+    '- 只输出 JSON，不要其他文字'
+)
 
-class RAGService:
-    def __init__(self, vector_service: VectorService):
-        self.vector_service = vector_service
-        self.llm_api_url = "https://api.siliconflow.cn/v1/chat/completions"
-        self.llm_api_key = settings.embedding_api_key  # 复用同一个 key
-        self.llm_model = "Qwen/Qwen2.5-72B-Instruct"
+ANSWER_SYSTEM_PROMPT = (
+    "你是工作日志助手，基于提供的日志上下文回答问题。\n"
+    "规则：\n"
+    "1. 只能使用提供的日志内容回答，不要编造\n"
+    "2. 引用来源使用 [来源 X] 格式\n"
+    "3. 如果上下文不足以回答，明确说明\n"
+    "4. 用中文简洁回答"
+)
 
-    def _build_context(self, sources: list[RAGSource]) -> str:
-        """构建上下文"""
-        context_parts = []
-        for i, src in enumerate(sources):
-            context_parts.append(
-                f"[来源 {i+1}]\n"
-                f"日期: {src.log_date}\n"
-                f"Agent: {src.agent_type}\n"
-                f"标题: {src.title or '无'}\n"
-                f"文件: {src.file_path}\n"
-                f"内容片段:\n{src.chunk_content}\n"
+
+class QnAService:
+    """Two-step Q&A: LLM filter parsing → SQL retrieval → LLM answer"""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    # ---------------- LLM 调用（Anthropic 协议） ----------------
+
+    async def _call_llm(self, system: str, user: str, max_tokens: int = 2000) -> str:
+        if not settings.llm_api_key:
+            raise RuntimeError("LLM_API_KEY 未配置")
+        url = f"{settings.llm_api_base}/v1/messages"
+        headers = {
+            "x-api-key": settings.llm_api_key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": settings.llm_model,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": user}],
+        }
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            # Anthropic 格式: content 为块数组
+            parts = [b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"]
+            return "".join(parts).strip()
+
+    # ---------------- 第 1 步：解析过滤条件 ----------------
+
+    async def extract_filters(self, question: str) -> dict[str, Any]:
+        from datetime import date
+        today = date.today().isoformat()
+        try:
+            raw = await self._call_llm(
+                FILTER_SYSTEM_PROMPT.replace("{today}", today),
+                question,
+                max_tokens=300,
             )
-        return "\n---\n".join(context_parts)
+            # 容忍模型输出 ```json 包裹
+            m = re.search(r"\{.*\}", raw, re.DOTALL)
+            filters = json.loads(m.group(0)) if m else {}
+        except Exception:
+            filters = {}
+        return {
+            "start_date": filters.get("start_date") or None,
+            "end_date": filters.get("end_date") or None,
+            "agent_name": filters.get("agent_name") or None,
+            "keywords": [k for k in (filters.get("keywords") or []) if k][:4],
+        }
 
-    async def generate_answer(self, query: str, sources: list[RAGSource]) -> str:
-        """生成 RAG 回答"""
-        if not sources:
-            return "没有找到相关的上下文信息来回答该问题。"
+    # ---------------- 第 2 步：SQL 检索全文 ----------------
 
-        context = self._build_context(sources)
-
-        system_prompt = (
-            "你是一个智能助手，基于提供的上下文回答用户问题。\n"
-            "规则：\n"
-            "1. 只能使用提供的上下文信息回答\n"
-            "2. 如果上下文不足以回答，请明确说明\n"
-            "3. 引用来源时使用 [来源 X] 格式\n"
-            "4. 回答要简洁、准确、有帮助\n"
-            "5. 使用中文回答"
-        )
-
-        user_prompt = f"上下文信息：\n{context}\n\n问题：{query}"
-
-        return await self._call_llm(system_prompt, user_prompt, temperature=0.3)
-
-    async def generate_chat_answer(
+    async def retrieve_logs(
         self,
-        messages: list[RAGChatMessage],
-        sources: list[RAGSource],
-        temperature: float = 0.7,
-    ) -> str:
-        """多轮对话 RAG 回答"""
-        if not sources:
-            context = "没有找到相关的上下文信息。"
-        else:
-            context = self._build_context(sources)
+        question: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        keywords: Optional[list[str]] = None,
+        limit: int = 12,
+    ) -> list[dict]:
+        from datetime import date as _date
+        from app.api.deps import resolve_agent_names_to_ids
 
-        system_prompt = (
-            "你是一个智能助手，基于提供的上下文回答用户问题。\n"
-            "规则：\n"
-            "1. 优先使用提供的上下文信息回答\n"
-            "2. 如果上下文不足以回答，可以结合通用知识但要说明\n"
-            "3. 引用来源时使用 [来源 X] 格式\n"
-            "4. 回答要自然、有帮助\n"
-            "5. 使用中文回答"
-        )
+        query = select(MarkdownLog).order_by(
+            MarkdownLog.log_date.desc(), MarkdownLog.created_at.desc()
+        ).limit(limit * 3)
 
-        # 构建消息历史
-        formatted_messages = [{"role": "system", "content": system_prompt}]
+        if start_date:
+            try:
+                query = query.where(MarkdownLog.log_date >= _date.fromisoformat(start_date))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                query = query.where(MarkdownLog.log_date <= _date.fromisoformat(end_date))
+            except ValueError:
+                pass
+        if agent_name:
+            ids = await resolve_agent_names_to_ids(self.db, [agent_name])
+            if not ids:
+                return []
+            query = query.where(MarkdownLog.agent_id.in_(ids))
 
-        # 添加上下文作为系统消息（仅第一轮）
-        formatted_messages.append({"role": "system", "content": f"相关上下文：\n{context}"})
+        result = await self.db.execute(query)
+        logs = result.scalars().all()
+        if not logs:
+            return []
 
-        for msg in messages:
-            formatted_messages.append({"role": msg.role, "content": msg.content})
+        # 关键词相关性排序：命中标题 > 摘要 > 正文，按命中数取前 limit 条
+        kws = [k.lower() for k in (keywords or []) if k.strip()]
 
-        return await self._call_llm_batch(formatted_messages, temperature)
+        def score(log: MarkdownLog) -> int:
+            title = (log.title or "").lower()
+            summary = (log.summary or "").lower()
+            s = sum(2 for k in kws if k in title)
+            s += sum(1 for k in kws if k in summary)
+            return s
 
-    async def _call_llm(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
-        """调用 LLM API"""
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                self.llm_api_url,
-                headers={
-                    "Authorization": f"Bearer {self.llm_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.llm_model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "temperature": temperature,
-                    "max_tokens": 2000,
-                    "stream": False,
-                },
+        ranked = sorted(logs, key=score, reverse=True)[:limit]
+        return [
+            {
+                "log": log,
+                "title": log.title or log.file_path.split("/")[-1].replace(".md", ""),
+                "agent_name": getattr(log, "agent_name", None) or log.agent_type,
+                "log_date": str(log.log_date),
+                "content": self._read_content(log),
+            }
+            for log in ranked
+        ]
+
+    def _read_content(self, log: MarkdownLog) -> str:
+        """读取磁盘上的日志全文（截断防超长）"""
+        from pathlib import Path
+        try:
+            full_path = Path(settings.markdown_root) / log.file_path
+            text = full_path.read_text(encoding="utf-8")
+            return text[:4000]
+        except Exception:
+            return log.summary or ""
+
+    # ---------------- 第 3 步：合成回答 ----------------
+
+    async def synthesize_answer(self, question: str, logs: list[dict]) -> tuple[str, list[RAGSource]]:
+        if not logs:
+            return "没有找到相关的日志来回答这个问题。", []
+
+        context_parts = []
+        sources: list[RAGSource] = []
+        for i, item in enumerate(logs):
+            context_parts.append(
+                f"[来源 {i + 1}]\n日期: {item['log_date']}\n"
+                f"Agent: {item['agent_name']}\n标题: {item['title']}\n"
+                f"内容:\n{item['content']}"
             )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
-
-    async def _call_llm_batch(self, messages: list[dict], temperature: float = 0.7) -> str:
-        """批量调用 LLM（支持多轮对话）"""
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                self.llm_api_url,
-                headers={
-                    "Authorization": f"Bearer {self.llm_api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.llm_model,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": 2000,
-                    "stream": False,
-                },
+            log = item["log"]
+            sources.append(
+                RAGSource(
+                    markdown_log_id=log.id,
+                    session_id=log.session_id,
+                    agent_type=item["agent_name"],
+                    log_date=item["log_date"],
+                    file_path=log.file_path,
+                    title=item["title"],
+                    chunk_content=(log.summary or item["content"][:200]),
+                    score=1.0,
+                )
             )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+
+        context = "\n---\n".join(context_parts)
+        user_prompt = f"日志上下文（共 {len(logs)} 篇）：\n{context}\n\n问题：{question}"
+        answer = await self._call_llm(ANSWER_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
+        return answer, sources

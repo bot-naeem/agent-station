@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_agent
+from app.api.deps import get_current_agent_from_api_key as get_current_agent
 from app.core.database import get_db
 from app.models.agent import Agent
 from app.models.todo import Todo
