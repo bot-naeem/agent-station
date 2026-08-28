@@ -20,7 +20,7 @@ import frontmatter
 
 CONFIG_PATH = Path.home() / ".config" / "agent-station" / "config.yaml"
 DEFAULT_CONFIG = {
-    "api_url": "https://codingfamily.online/api/v1",
+    "api_url": "http://localhost:8000/api/v1",
     "api_key": "",
     "local_dir": "~/.agent-station/logs",
     "sync_interval": 60,

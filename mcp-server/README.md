@@ -19,7 +19,7 @@ MCP (Model Context Protocol) server providing standardized access to the Agent S
 cd mcp-server
 pip install -r requirements.txt
 export AS_API_KEY=sk-as-xxxxxxxx
-export AS_API_BASE=https://codingfamily.online/api/v1
+export AS_API_BASE=https://your-domain.example.com/api/v1
 python server.py
 # Server runs on http://localhost:8080/sse
 ```
@@ -29,7 +29,7 @@ python server.py
 docker build -t as-mcp .
 docker run -d --name as-mcp \
   -e AS_API_KEY=sk-as-xxxxxxxx \
-  -e AS_API_BASE=https://codingfamily.online/api/v1 \
+  -e AS_API_BASE=https://your-domain.example.com/api/v1 \
   -p 8080:8080 \
   as-mcp
 ```
@@ -109,7 +109,7 @@ log_id = await client.call_tool("write_log", {
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AS_API_KEY` | Yes | - | Platform API key (sk-as-...) |
-| `AS_API_BASE` | No | `https://codingfamily.online/api/v1` | Platform API base URL |
+| `AS_API_BASE` | No | `http://localhost:8000/api/v1` | Platform API base URL |
 | `MCP_PORT` | No | `8080` | Server port |
 
 ## Security Notes

@@ -1,4 +1,4 @@
-api_url: "https://codingfamily.online/api/v1"
+api_url: "http://localhost:8000/api/v1"
 api_key: "sk-as-xxxxxxxxxxxx"  # 从管理员获取
 local_dir: "~/.agent-station/logs"            # 本地日志目录
 sync_interval: 60                      # 同步间隔（秒）

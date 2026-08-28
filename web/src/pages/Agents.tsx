@@ -13,9 +13,10 @@ import {
 
 type DialogMode = 'create' | 'edit' | null
 
-const MCP_SSE_URL = 'https://codingfamily.online/mcp/sse'
-const DOCS_URL = 'https://codingfamily.online/api/v1/docs/mcp'
-const SKILL_TEMPLATE_URL = 'https://codingfamily.online/api/v1/docs/skill-template'
+const APP_ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
+const MCP_SSE_URL = `${APP_ORIGIN}/mcp/sse`
+const DOCS_URL = `${APP_ORIGIN}/api/v1/docs/mcp`
+const SKILL_TEMPLATE_URL = `${APP_ORIGIN}/api/v1/docs/skill-template`
 
 const PERMISSION_META: Record<string, { label: string; desc: string; chip: string }> = {
   read_own:      { label: '读取自己', desc: '仅可查看自己写入的日志',           chip: 'bg-gray-100 text-gray-700 ring-gray-200' },

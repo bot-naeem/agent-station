@@ -14,7 +14,7 @@ from starlette.responses import JSONResponse, Response
 import uvicorn
 
 # Config from env
-API_BASE = os.getenv("AS_API_BASE", "https://codingfamily.online/api/v1")
+API_BASE = os.getenv("AS_API_BASE", "http://localhost:8000/api/v1")
 API_KEY = os.getenv("AS_API_KEY")
 if not API_KEY:
     raise RuntimeError("AS_API_KEY environment variable is required")

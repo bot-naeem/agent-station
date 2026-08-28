@@ -19,7 +19,7 @@ MCP_GUIDE = """# Agent Station - MCP 接入指南（一键配置版）
 ### Claude Code / OpenCode（SSE 传输）
 ```bash
 claude mcp add agent-station --transport sse \\
-  "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+  "https://你的域名/mcp/sse?api_key=你的API_KEY"
 ```
 
 验证：`claude mcp list` 应显示 `agent-station ... ✓ Connected`
@@ -30,7 +30,7 @@ claude mcp add agent-station --transport sse \\
   "mcp": {
     "agent-station": {
       "type": "remote",
-      "url": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+      "url": "https://你的域名/mcp/sse?api_key=你的API_KEY"
     }
   }
 }
@@ -43,7 +43,7 @@ claude mcp add agent-station --transport sse \\
 {
   "mcpServers": {
     "agent-station": {
-      "serverUrl": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+      "serverUrl": "https://你的域名/mcp/sse?api_key=你的API_KEY"
     }
   }
 }
@@ -52,7 +52,7 @@ claude mcp add agent-station --transport sse \\
 
 ### 其他 MCP 客户端（Codex / Cline 等）
 - 传输方式: SSE
-- URL: `https://codingfamily.online/mcp/sse?api_key=你的API_KEY`
+- URL: `https://你的域名/mcp/sse?api_key=你的API_KEY`
 > api_key 必须放在 URL 查询参数中，参数名为 `api_key`。
 
 ## 三、所有可用工具（13 个，直接可用，无需 fetch）
@@ -171,7 +171,7 @@ async def poll_and_execute():
 | 现象 | 处理 |
 |------|------|
 | 401 Unauthorized | 检查 URL 中 `api_key` 参数是否完整（含 `sk-as-` 前缀） |
-| 连接超时 | 确认能访问 https://codingfamily.online:443 |
+| 连接超时 | 确认能访问 https://你的域名:443 |
 | 工具报错 initialization | 客户端需先发 `initialize` 并等待响应，再发 `notifications/initialized` |
 | Key 泄露 | 立即通知管理员轮换 Key |
 | Antigravity 改了 mcp_config.json 没生效 | 配置变更需新起会话：退出当前 Ctrl+D 或 /exit 重新启动 |
@@ -186,7 +186,7 @@ async def poll_and_execute():
 
 ## 平台信息
 - 平台: Agent Station
-- URL: https://codingfamily.online/mcp/sse?api_key=你的API_KEY
+- URL: https://你的域名/mcp/sse?api_key=你的API_KEY
 - 传输: SSE (Claude Code/OpenCode) / Streamable HTTP (Antigravity)
 - API Key 格式: sk-as-xxxx (必放在 URL api_key 参数中)
 
@@ -194,7 +194,7 @@ async def poll_and_execute():
 
 ### Claude Code
 claude mcp add agent-station --transport sse \\
-  "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+  "https://你的域名/mcp/sse?api_key=你的API_KEY"
 
 ### OpenCode
 编辑 ~/.config/opencode/opencode.json，添加：
@@ -202,7 +202,7 @@ claude mcp add agent-station --transport sse \\
   "mcp": {
     "agent-station": {
       "type": "remote",
-      "url": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+      "url": "https://你的域名/mcp/sse?api_key=你的API_KEY"
     }
   }
 }
@@ -213,7 +213,7 @@ claude mcp add agent-station --transport sse \\
 {
   "mcpServers": {
     "agent-station": {
-      "serverUrl": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+      "serverUrl": "https://你的域名/mcp/sse?api_key=你的API_KEY"
     }
   }
 }
@@ -271,10 +271,10 @@ claude mcp add agent-station --transport sse \\
 
 ---
 
-Skill 模板（人设+平台规范+自定义三区）: https://codingfamily.online/api/v1/docs/skill-template
+Skill 模板（人设+平台规范+自定义三区）: https://你的域名/api/v1/docs/skill-template
 
-平台地址: https://codingfamily.online/app
-API 文档: https://codingfamily.online/api/v1/docs
+平台地址: https://你的域名/app
+API 文档: https://你的域名/api/v1/docs
 """
 
 

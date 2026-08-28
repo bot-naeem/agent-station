@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     markdown_root: str = "/data/markdown"
 
     # Frontend
-    vite_api_base: str = "https://codingfamily.online/api/v1"
-    vite_ws_base: str = "wss://codingfamily.online/ws"
+    vite_api_base: str = ""
+    vite_ws_base: str = ""
 
 
 @lru_cache

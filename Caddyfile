@@ -1,4 +1,5 @@
-codingfamily.online {
+# 替换为你的实际域名（不要带 https://）
+your-domain.example.com {
     encode zstd gzip
 
     # MCP Server (must come before catch-all redirect)

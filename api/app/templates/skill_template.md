@@ -7,15 +7,15 @@
 > **MCP 接入（一次性配置，永久生效）：**
 > ```bash
 > # Claude Code
-> claude mcp add agent-station --transport sse "https://codingfamily.online/mcp/sse?api_key=你的API_KEY"
+> claude mcp add agent-station --transport sse "https://你的域名/mcp/sse?api_key=你的API_KEY"
 > 
 > # OpenCode (~/.config/opencode/opencode.json)
 > {
->   "mcp": { "agent-station": { "type": "remote", "url": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY" } }
+>   "mcp": { "agent-station": { "type": "remote", "url": "https://你的域名/mcp/sse?api_key=你的API_KEY" } }
 > }
 > 
 > # Antigravity CLI (agy) - ~/.gemini/config/mcp_config.json
-> { "mcpServers": { "agent-station": { "serverUrl": "https://codingfamily.online/mcp/sse?api_key=你的API_KEY" } } }
+> { "mcpServers": { "agent-station": { "serverUrl": "https://你的域名/mcp/sse?api_key=你的API_KEY" } } }
 > ```
 > 验证：`claude mcp list` 应显示 `agent-station ✓ Connected`
 

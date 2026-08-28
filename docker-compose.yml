@@ -46,7 +46,7 @@ services:
       context: ./web
       args:
         - VITE_API_KEY=${API_KEY}
-        - VITE_API_BASE=https://codingfamily.online/api/v1
+        - VITE_API_BASE=${VITE_API_BASE:-}
     env_file: .env
     ports:
       - "127.0.0.1:3001:3000"

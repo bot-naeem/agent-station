@@ -33,8 +33,9 @@ docker compose exec -T api alembic upgrade head
 echo "   ✓ 迁移完成"
 
 echo "5. 健康检查..."
+# 通过容器内部网络访问 API（不依赖外部域名）
 for i in {1..10}; do
-    if curl -sf -H "X-API-Key: $API_KEY" https://codingfamily.online/api/v1/health/public > /dev/null; then
+    if docker compose exec -T api curl -sf http://localhost:8000/api/v1/health/public > /dev/null 2>&1; then
         echo "   ✓ API 健康检查通过"
         break
     fi
@@ -47,8 +48,9 @@ done
 
 echo ""
 echo "=== 部署完成 ==="
-echo "前端访问: https://codingfamily.online/app"
-echo "API 文档: https://codingfamily.online/api/v1/docs"
+PUBLIC_URL="${PUBLIC_URL:-http://localhost}"
+echo "前端访问: ${PUBLIC_URL}/app"
+echo "API 文档: ${PUBLIC_URL}/api/v1/docs"
 echo ""
 echo "查看日志: docker compose logs -f"
 echo "停止服务: docker compose down""
