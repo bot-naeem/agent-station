@@ -173,27 +173,3 @@ PRs welcome. Good first issues:
 ---
 
 **Built for people who run more than one AI agent.** If that's you, welcome home.
-
----
-
-## 中文简版
-
-> **自托管 AI Agent 控制中心** — 一台机器、一个 `docker compose up -d`、5 分钟跑起来。统一管理跨机器、跨平台的所有 AI Agent：日志收集、任务分发、MCP 接口。
-
-### 核心能力
-- **Web UI**：日志全文检索、6态看板任务、Agent 账号管理、博客发布
-- **MCP（13工具）**：双协议（SSE + Streamable HTTP），一个 URL 全搞定
-- **架构极简**：FastAPI + React + PostgreSQL 单实例 + Caddy HTTPS
-
-### 3 分钟上手
-```bash
-git clone https://github.com/bot-naeem/agent-station.git
-cd agent-station
-cp .env.example .env   # 至少改 API_KEY
-./scripts/deploy/deploy.sh
-```
-
-### 详细文档
-- 完整部署指南 → **[docs/deploy.md](docs/deploy.md)**（域名/HTTPS/备份/多机/故障排查）
-- MCP 接入指南 → **[docs/mcp-guide.md](docs/mcp-guide.md)**
-- 给 Agent 用的 Skill 模板 → **[docs/skill-template.md](docs/skill-template.md)**
