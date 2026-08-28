@@ -1,4 +1,4 @@
-# Agent Log Management Platform
+# Agent Station Platform
 
 基于 Docker 容器化部署的 Agent 日志管理平台，支持：
 - 📝 **Markdown 日志管理** - 按日期/Agent 分类、全文搜索、标签筛选、日历视图
@@ -37,12 +37,12 @@ EMBEDDING_API_KEY=sk-xxxxxxxxxxxxx
 其他密钥已自动生成：
 - `POSTGRES_PASSWORD` - 数据库密码
 - `API_SECRET_KEY` - JWT 签名密钥
-- `API_KEY` - 客户端统一认证 Key: `sk-agent-log-xxxxxxxxxxxxx`
+- `API_KEY` - 客户端统一认证 Key: `sk-agent-station-xxxxxxxxxxxxx`
 
 ### 2. 部署
 
 ```bash
-cd /home/ubuntu/agent-log-platform
+cd /home/ubuntu/agent-station-platform
 ./scripts/deploy/deploy.sh
 ```
 
@@ -61,11 +61,11 @@ cd /home/ubuntu/agent-log-platform
 ```bash
 # 1. 下载构建好的二进制文件 (或直接运行 Python 脚本)
 # 2. 创建配置文件
-mkdir -p ~/.config/agent-log
-cat > ~/.config/agent-log/config.yaml <<EOF
+mkdir -p ~/.config/agent-station
+cat > ~/.config/agent-station/config.yaml <<EOF
 api_url: "https://codingfamily.online/api/v1"
-api_key: "sk-agent-log-xxxxxxxxxxxxx"  # 从 .env 中获取
-local_dir: "~/.agent-logs"
+api_key: "sk-as-xxxxxxxxxxxxx"  # 从 .env 中获取
+local_dir: "~/.agent-station/logs"
 sync_interval: 60
 watch: true
 EOF
@@ -77,7 +77,7 @@ EOF
 ```python
 # 在技能中添加 hook
 def on_task_complete(context):
-    log_path = f"~/.agent-logs/{date}/{agent}/session-{session_id}.md"
+    log_path = f"~/.agent-station/logs/{date}/{agent}/session-{session_id}.md"
     write_markdown(log_path, generate_markdown(context))
 ```
 
@@ -89,7 +89,7 @@ def on_task_complete(context):
       "matcher": "*",
       "hooks": [{
         "type": "command",
-        "command": "python -c \"import sys; from agent_log_sync import sync; sync(sys.argv[1])\""
+        "command": "python -c \"import sys; from agent_station_sync import sync; sync(sys.argv[1])\""
       }]
     }]
   }
@@ -97,7 +97,7 @@ def on_task_complete(context):
 ```
 
 #### Codex / Gemini CLI
-使用 wrapper 脚本在任务结束时写入 `~/.agent-logs/{date}/{agent}/session-xxx.md`
+使用 wrapper 脚本在任务结束时写入 `~/.agent-station/logs/{date}/{agent}/session-xxx.md`
 
 ### Markdown 格式规范
 
@@ -176,7 +176,7 @@ docker compose down
 ## 目录结构
 
 ```
-/home/ubuntu/agent-log-platform/
+ /home/ubuntu/agent-station/
 ├── docker-compose.yml          # 服务编排
 ├── Caddyfile                   # 反向代理配置
 ├── .env                        # 环境变量 (需填入密钥)

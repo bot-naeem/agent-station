@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     )
 
     # Database
-    postgres_user: str = "agentlog"
+    postgres_user: str = "agentstation"
     postgres_password: str = "changeme"
-    postgres_db: str = "agent_logs"
-    database_url: str = "postgresql://agentlog:changeme@postgres:5432/agent_logs"
+    postgres_db: str = "agent_station"
+    database_url: str = "postgresql://agentstation:changeme@postgres:5432/agent_station"
 
     # Redis
     redis_url: str = "redis://redis:6379/0"
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     api_secret_key: str = "changeme"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    api_key: str = "sk-agent-log-changeme"
+    api_key: str = "sk-as-changeme"
 
     # Markdown
     markdown_root: str = "/data/markdown"

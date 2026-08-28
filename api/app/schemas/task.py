@@ -12,6 +12,7 @@ class TaskCreate(BaseModel):
     detail: Optional[str] = None
     tags: list[str] = []
     project: Optional[str] = None
+    agent_id: Optional[UUID] = None  # 仅 admin 可用：指派给指定 Agent
 
 
 class TaskUpdate(BaseModel):

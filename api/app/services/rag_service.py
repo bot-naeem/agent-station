@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.markdown_log import MarkdownLog
+from app.models.blog_post import BlogPost, BlogStatus
 from app.schemas.rag import RAGSource
 
 settings = get_settings()
@@ -160,17 +161,86 @@ class QnAService:
         except Exception:
             return log.summary or ""
 
+    # ---------------- 博客检索 ----------------
+
+    async def retrieve_blogs(
+        self,
+        question: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        keywords: Optional[list[str]] = None,
+        limit: int = 6,
+    ) -> list[dict]:
+        """Retrieve relevant blog posts (published only)"""
+        from datetime import date as _date
+        from app.api.deps import resolve_agent_names_to_ids
+
+        query = select(BlogPost).where(BlogPost.status == BlogStatus.published).order_by(
+            BlogPost.published_at.desc().nullslast(), BlogPost.created_at.desc()
+        ).limit(limit * 3)
+
+        if start_date:
+            try:
+                query = query.where(BlogPost.published_at >= _date.fromisoformat(start_date))
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                query = query.where(BlogPost.published_at <= _date.fromisoformat(end_date))
+            except ValueError:
+                pass
+        if agent_name:
+            ids = await resolve_agent_names_to_ids(self.db, [agent_name])
+            if not ids:
+                return []
+            query = query.where(BlogPost.agent_id.in_(ids))
+
+        result = await self.db.execute(query)
+        blogs = result.scalars().all()
+        if not blogs:
+            return []
+
+        kws = [k.lower() for k in (keywords or []) if k.strip()]
+
+        def score(blog: BlogPost) -> int:
+            title = (blog.title or "").lower()
+            summary = (blog.summary or "").lower()
+            content = (blog.content or "").lower()
+            s = sum(3 for k in kws if k in title)
+            s += sum(2 for k in kws if k in summary)
+            s += sum(1 for k in kws if k in content)
+            return s
+
+        ranked = sorted(blogs, key=score, reverse=True)[:limit]
+        return [
+            {
+                "blog": blog,
+                "title": blog.title,
+                "agent_name": blog.agent_name or blog.agent_id,
+                "log_date": str(blog.published_at or blog.created_at)[:10],
+                "content": blog.content[:4000],
+            }
+            for blog in ranked
+        ]
+
     # ---------------- 第 3 步：合成回答 ----------------
 
-    async def synthesize_answer(self, question: str, logs: list[dict]) -> tuple[str, list[RAGSource]]:
-        if not logs:
-            return "没有找到相关的日志来回答这个问题。", []
+    async def synthesize_answer(
+        self, question: str, logs: list[dict], blogs: list[dict] | None = None
+    ) -> tuple[str, list[RAGSource]]:
+        blogs = blogs or []
+        if not logs and not blogs:
+            return "没有找到相关的日志或博客来回答这个问题。", []
 
         context_parts = []
         sources: list[RAGSource] = []
-        for i, item in enumerate(logs):
+        idx = 1
+
+        # 日志来源
+        for item in logs:
             context_parts.append(
-                f"[来源 {i + 1}]\n日期: {item['log_date']}\n"
+                f"[来源 {idx}]\n日期: {item['log_date']}\n"
                 f"Agent: {item['agent_name']}\n标题: {item['title']}\n"
                 f"内容:\n{item['content']}"
             )
@@ -187,8 +257,32 @@ class QnAService:
                     score=1.0,
                 )
             )
+            idx += 1
+
+        # 博客来源
+        for item in blogs:
+            context_parts.append(
+                f"[博客 {idx}]\n日期: {item['log_date']}\n"
+                f"作者: {item['agent_name']}\n标题: {item['title']}\n"
+                f"内容:\n{item['content']}"
+            )
+            blog = item["blog"]
+            sources.append(
+                RAGSource(
+                    markdown_log_id=blog.id,
+                    session_id=blog.session_id if hasattr(blog, "session_id") else None,
+                    agent_type=item["agent_name"],
+                    log_date=item["log_date"],
+                    file_path=f"blogs/{blog.slug}",
+                    title=item["title"],
+                    chunk_content=(blog.summary or item["content"][:200]),
+                    score=1.0,
+                )
+            )
+            idx += 1
 
         context = "\n---\n".join(context_parts)
-        user_prompt = f"日志上下文（共 {len(logs)} 篇）：\n{context}\n\n问题：{question}"
+        total_sources = len(logs) + len(blogs)
+        user_prompt = f"日志与博客上下文（共 {total_sources} 篇）：\n{context}\n\n问题：{question}"
         answer = await self._call_llm(ANSWER_SYSTEM_PROMPT, user_prompt, max_tokens=2000)
         return answer, sources

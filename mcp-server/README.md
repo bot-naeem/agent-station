@@ -1,6 +1,6 @@
-# Agent Log Platform - MCP Server
+# Agent Station - MCP Server
 
-MCP (Model Context Protocol) server providing standardized access to the Agent Log Platform for AI agents (Claude Code, Codex, OpenCode, Continue, Cline, etc.).
+MCP (Model Context Protocol) server providing standardized access to the Agent Station Platform for AI agents (Claude Code, Codex, OpenCode, Continue, Cline, etc.).
 
 ## Features
 
@@ -18,20 +18,20 @@ MCP (Model Context Protocol) server providing standardized access to the Agent L
 ```bash
 cd mcp-server
 pip install -r requirements.txt
-export ALP_API_KEY=sk-agent-log-xxxxxxxx
-export ALP_API_BASE=https://codingfamily.online/api/v1
+export AS_API_KEY=sk-as-xxxxxxxx
+export AS_API_BASE=https://codingfamily.online/api/v1
 python server.py
 # Server runs on http://localhost:8080/sse
 ```
 
 ### 2. Docker
 ```bash
-docker build -t alp-mcp .
-docker run -d --name alp-mcp \
-  -e ALP_API_KEY=sk-agent-log-xxxxxxxx \
-  -e ALP_API_BASE=https://codingfamily.online/api/v1 \
+docker build -t as-mcp .
+docker run -d --name as-mcp \
+  -e AS_API_KEY=sk-as-xxxxxxxx \
+  -e AS_API_BASE=https://codingfamily.online/api/v1 \
   -p 8080:8080 \
-  alp-mcp
+  as-mcp
 ```
 
 ### 3. Docker Compose (with main platform)
@@ -41,7 +41,7 @@ mcp-server:
   build: ./mcp-server
   env_file: .env
   environment:
-    - ALP_API_BASE=http://api:8000
+    - AS_API_BASE=http://api:8000
   ports:
     - "127.0.0.1:8080:8080"
   depends_on:
@@ -52,12 +52,12 @@ mcp-server:
 
 ### Claude Code
 ```bash
-claude mcp add agent-log --transport sse http://your-server:8080/sse
+claude mcp add agent-station --transport sse http://your-server:8080/sse
 ```
 
 ### Codex
 ```bash
-codex mcp add agent-log --url http://your-server:8080/sse
+codex mcp add agent-station --url http://your-server:8080/sse
 ```
 
 ### OpenCode
@@ -65,7 +65,7 @@ codex mcp add agent-log --url http://your-server:8080/sse
 // ~/.config/opencode/mcp.json
 {
   "mcpServers": {
-    "agent-log": {
+    "agent-station": {
       "type": "sse",
       "url": "http://your-server:8080/sse"
     }
@@ -78,7 +78,7 @@ codex mcp add agent-log --url http://your-server:8080/sse
 // .continue/config.json
 {
   "mcpServers": {
-    "agent-log": {
+    "agent-station": {
       "transport": "sse",
       "url": "http://your-server:8080/sse"
     }
@@ -108,8 +108,8 @@ log_id = await client.call_tool("write_log", {
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `ALP_API_KEY` | Yes | - | Platform API key (sk-agent-log-...) |
-| `ALP_API_BASE` | No | `https://codingfamily.online/api/v1` | Platform API base URL |
+| `AS_API_KEY` | Yes | - | Platform API key (sk-as-...) |
+| `AS_API_BASE` | No | `https://codingfamily.online/api/v1` | Platform API base URL |
 | `MCP_PORT` | No | `8080` | Server port |
 
 ## Security Notes
@@ -129,7 +129,7 @@ curl http://localhost:8080/sse
 
 | Issue | Fix |
 |-------|-----|
-| `ALP_API_KEY not set` | Export in shell or `.env` file |
+| `AS_API_KEY not set` | Export in shell or `.env` file |
 | Connection refused | Check port 8080, firewall, Docker network |
 | Tools not showing in agent | Restart agent after `mcp add` |
 | SSE timeout | Increase client timeout, check network latency |

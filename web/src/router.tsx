@@ -4,9 +4,10 @@ import { LogsList } from './pages/Logs/LogsList'
 import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
 import { Chat } from './pages/RAG/Chat'
-import { TodoBoard } from './pages/Todos/TodoBoard'
 import { Agents } from './pages/Agents'
 import { Login } from './pages/Login'
+import { BlogsList, BlogDetail, BlogEditor } from './pages/Blogs'
+import { TaskCenter } from './pages/Tasks'
 import { Layout } from './components/Layout'
 import { AuthLayout } from './components/AuthLayout'
 
@@ -44,16 +45,40 @@ const ragRoute = createRoute({
   component: Chat,
 })
 
-const todosRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/todos',
-  component: TodoBoard,
-})
-
 const agentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/agents',
   component: Agents,
+})
+
+const blogsListRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog',
+  component: BlogsList,
+})
+
+const blogDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog/$slug',
+  component: BlogDetail,
+})
+
+const blogEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog/editor/$blogId',
+  component: BlogEditor,
+})
+
+const blogEditorNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/blog/editor/new',
+  component: BlogEditor,
+})
+
+const taskCenterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tasks',
+  component: TaskCenter,
 })
 
 const loginRoute = createRoute({
@@ -68,8 +93,12 @@ const routeTree = rootRoute.addChildren([
   logEditorRoute,
   logDetailRoute,
   ragRoute,
-  todosRoute,
   agentsRoute,
+  blogsListRoute,
+  blogDetailRoute,
+  blogEditorRoute,
+  blogEditorNewRoute,
+  taskCenterRoute,
   loginRoute,
 ])
 

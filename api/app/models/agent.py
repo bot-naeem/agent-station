@@ -66,6 +66,7 @@ class Agent(Base):
     # Relationships
     sessions = relationship("Session", back_populates="agent", lazy="dynamic")
     markdown_logs = relationship("MarkdownLog", back_populates="agent", lazy="dynamic")
+    blog_posts = relationship("BlogPost", back_populates="agent", lazy="dynamic")
 
     __table_args__ = (
         Index("ix_agents_name_active", "name", "is_active"),
@@ -99,7 +100,7 @@ class Agent(Base):
     @staticmethod
     def generate_api_key() -> str:
         """Generate a new API key"""
-        return f"sk-alp-{secrets.token_urlsafe(32)}"
+        return f"sk-as-{secrets.token_urlsafe(32)}"
 
     def verify_api_key(self, api_key: str) -> bool:
         """Verify provided API key against stored hash"""

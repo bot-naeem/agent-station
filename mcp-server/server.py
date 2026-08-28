@@ -14,10 +14,10 @@ from starlette.responses import JSONResponse, Response
 import uvicorn
 
 # Config from env
-API_BASE = os.getenv("ALP_API_BASE", "https://codingfamily.online/api/v1")
-API_KEY = os.getenv("ALP_API_KEY")
+API_BASE = os.getenv("AS_API_BASE", "https://codingfamily.online/api/v1")
+API_KEY = os.getenv("AS_API_KEY")
 if not API_KEY:
-    raise RuntimeError("ALP_API_KEY environment variable is required")
+    raise RuntimeError("AS_API_KEY environment variable is required")
 
 # Context variable for per-connection API key (fallback to env API_KEY)
 _current_api_key: contextvars.ContextVar[str | None] = contextvars.ContextVar("_current_api_key", default=None)
@@ -43,7 +43,7 @@ async def _validate_api_key(request: Request) -> str | JSONResponse:
     return api_key
 
 
-mcp = FastMCP("agent-log-platform")
+mcp = FastMCP("agent-station")
 
 
 @mcp.tool()
@@ -64,7 +64,7 @@ async def write_log(
         log_date: The date this work happened, format "YYYY-MM-DD". \
 Omit or leave empty for today. MUST set this when recording work completed on an earlier day, otherwise it will be filed under today.
         tags: 2-5 short keywords for later retrieval, e.g. ["部署", "docker", "网关"]
-        project: Optional project/module name this work belongs to, e.g. "agent-log-platform"
+        project: Optional project/module name this work belongs to, e.g. "agent-station"
         task_type: Optional category: one of 开发/调试/部署/调研/运维/文档
     Returns:
         The created log ID (UUID string)
@@ -105,19 +105,16 @@ async def read_logs(
     agent_name: str = "",
     start_date: str = "",
     end_date: str = "",
-) -> list[dict]:
+) -> dict:
     """Read work logs, newest first. Each entry includes agent_name telling you WHO wrote it.
 
     Args:
         limit: Max number of logs to return (default 10, max 100)
-        agent_name: Exact agent display name to filter by, e.g. "Umayar". \
-Leave empty to see all logs within your permission scope.
-        start_date: Only logs on/after this date, "YYYY-MM-DD"
-        end_date: Only logs on/before this date, "YYYY-MM-DD". \
-TIP: to read ALL logs of ONE specific day, pass the SAME date as both start_date and end_date.
+        agent_name: Exact agent display_name to filter by, e.g. "Umayar". Leave empty to see all logs within your permission scope.
+        start_date: Only logs on/after this date, "YYYY-MM-DD" (inclusive, UTC)
+        end_date: Only logs on/before this date, "YYYY-MM-DD" (inclusive, UTC). Tip: to read ALL logs of ONE specific day, pass the SAME date as both start_date and end_date.
     Returns:
-        {"total": N, "count": M, "items": [log objects]} - items is ALWAYS a complete JSON array \
-(one entry per log: id, title, summary, agent_name, agent_type, log_date, file_path). Never truncated to one item.
+        {"total": N, "count": M, "items": [log objects]} - items is ALWAYS a complete JSON array (one entry per log: id, title, summary, agent_name, agent_type, log_date, file_path). Never truncated.
     """
     params: dict = {"page_size": max(1, min(limit, 100))}
     if agent_name.strip():
@@ -141,15 +138,20 @@ async def search_logs(
     agent_name: str = "",
     start_date: str = "",
     end_date: str = "",
-) -> list[dict]:
+) -> dict:
     """Full-text keyword search across log titles and summaries. Combine with read_logs to answer open questions about history.
 
+    Search syntax:
+      - Multiple words are AND-ed by default: "nginx 部署" = nginx AND 部署
+      - Use double quotes for exact phrase: "\"youtube transcript\"" matches the exact phrase
+      - Chinese/English mixed supported
+
     Args:
-        query: Keyword(s) to search, e.g. "nginx" or "登录 白屏"
+        query: Keyword(s) to search, e.g. "nginx" or "登录 白屏" or "\"youtube transcript\""
         limit: Max results (default 10)
-        agent_name: Exact agent name to filter by, e.g. "Umayar"
-        start_date: Only logs on/after this date, "YYYY-MM-DD"
-        end_date: Only logs on/before this date, "YYYY-MM-DD"
+        agent_name: Exact agent display_name to filter by, e.g. "Umayar"
+        start_date: Only logs on/after this date, "YYYY-MM-DD" (inclusive, UTC)
+        end_date: Only logs on/before this date, "YYYY-MM-DD" (inclusive, UTC)
     Returns:
         {"total": N, "count": M, "items": [matching log objects]} - items is ALWAYS a complete JSON array, never truncated.
     """
@@ -191,6 +193,153 @@ async def get_stats(start_date: str = "", end_date: str = "", agent_name: str = 
         resp = await client.get(f"{API_BASE}/markdown/stats", headers=_get_headers(), params=params)
         resp.raise_for_status()
         return resp.json()
+
+
+# ────────────────────────── 博客管理──────────────────────────
+
+@mcp.tool()
+async def read_blogs(
+    limit: int = 10,
+    category: str = "",
+    agent_name: str = "",
+    status: str = "published",
+) -> dict:
+    """Read blog posts, newest first.
+
+    Args:
+        limit: Max number of posts to return (default 10, max 100)
+        category: Filter by category, e.g. "技术"
+        agent_name: Exact agent display name to filter by, e.g. "Umayar"
+        status: Filter by status: "published" (default) | "draft" | "archived"
+    Returns:
+        {"total": N, "count": M, "items": [blog objects]} - items is ALWAYS a complete JSON array
+    """
+    params: dict = {"page_size": max(1, min(limit, 100)), "status": status}
+    if category.strip():
+        params["category"] = category.strip()
+    if agent_name.strip():
+        params["agent_name"] = agent_name.strip()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{API_BASE}/blog", headers=_get_headers(), params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
+
+
+@mcp.tool()
+async def search_blogs(
+    query: str,
+    limit: int = 10,
+    category: str = "",
+    agent_name: str = "",
+) -> dict:
+    """Full-text keyword search across blog posts.
+
+    Args:
+        query: Keyword(s) to search, e.g. "docker" or "部署 教程"
+        limit: Max results (default 10)
+        category: Filter by category
+        agent_name: Exact agent name to filter by
+    Returns:
+        {"total": N, "count": M, "items": [matching blog objects]}
+    """
+    params: dict = {"query": query, "page_size": max(1, min(limit, 100))}
+    if category.strip():
+        params["category"] = category.strip()
+    if agent_name.strip():
+        params["agent_name"] = agent_name.strip()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{API_BASE}/blog", headers=_get_headers(), params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
+
+
+@mcp.tool()
+async def get_blog_stats(category: str = "", agent_name: str = "") -> dict:
+    """Get aggregated statistics of blog posts.
+
+    Args:
+        category: Optional category filter
+        agent_name: Optional exact agent name filter
+    Returns:
+        Stats object: total_posts, published_posts, draft_posts, by_category, by_agent, top_tags
+    """
+    params: dict = {}
+    if category.strip():
+        params["category"] = category.strip()
+    if agent_name.strip():
+        params["agent_name"] = agent_name.strip()
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{API_BASE}/blog/stats", headers=_get_headers(), params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
+async def list_agents() -> dict:
+    """List all accessible agents for filtering. Use this to get valid agent display_names before filtering logs/blogs.
+
+    Returns:
+        {"agents": [{"name": "agent-name", "display_name": "显示名", "agent_type": "类型", "last_used_at": "ISO时间"}]} - only agents readable by current API key (based on permissions)
+    """
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{API_BASE}/agents/readable", headers=_get_headers())
+        resp.raise_for_status()
+        data = resp.json()
+        agents = [
+            {
+                "name": a.get("name"),
+                "display_name": a.get("display_name"),
+                "agent_type": a.get("agent_type"),
+                "last_used_at": a.get("last_used_at"),
+            }
+            for a in data.get("items", [])
+        ]
+        return {"agents": agents}
+
+
+@mcp.tool()
+async def write_blog(
+    title: str,
+    content: str,
+    summary: str = "",
+    cover_image: str = "",
+    category: str = "",
+    tags: list[str] = [],
+    status: str = "draft",
+) -> str:
+    """Create a blog post. Your identity is auto-bound to your API key.
+
+    Args:
+        title: Blog post title (required), e.g. "Docker 部署实战指南"
+        content: Full blog body in Markdown (Chinese). Use structure: \
+## 背景\n为什么写这篇 \n## 正文\n详细内容 \n## 总结\n核心要点
+        summary: Optional short summary for list view, e.g. "从零开始的 Docker 部署教程"
+        cover_image: Optional cover image URL
+        category: Optional category, e.g. "技术", "教程", "随笔"
+        tags: 2-5 short keywords for retrieval, e.g. ["docker", "部署", "运维"]
+        status: "draft" (default) | "published" | "archived". Only admins can publish directly.
+    Returns:
+        The created blog post ID (UUID string)
+    """
+    body: dict = {"title": title, "content": content, "status": status}
+    if summary.strip():
+        body["summary"] = summary
+    if cover_image.strip():
+        body["cover_image"] = cover_image
+    if category.strip():
+        body["category"] = category
+    if tags:
+        body["tags"] = tags
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.post(f"{API_BASE}/blog", headers=_get_headers(), json=body)
+        resp.raise_for_status()
+        return resp.json()["id"]
 
 
 # ────────────────────────── 任务管理（六态工作流）──────────────────────────
@@ -444,6 +593,9 @@ async def delete_task(id: str = "", confirm: bool = False) -> dict:
 # SSE Transport for MCP clients (Claude Code)
 sse = SseServerTransport("messages/")
 
+# Session API key store: session_id -> api_key
+_session_api_keys: dict[str, str] = {}
+
 
 async def handle_sse(request):
     # Extract api_key from query params
@@ -460,9 +612,56 @@ async def handle_sse(request):
     token = _current_api_key.set(api_key)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
+            # After connect_sse creates the session, store the API key for this session
+            # The session_id is the last key added to sse._sessions
+            if hasattr(sse, '_sessions') and sse._sessions:
+                # Get the most recently created session (the one we just created)
+                session_id = list(sse._sessions.keys())[-1]
+                _session_api_keys[session_id] = api_key
             await mcp._mcp_server.run(streams[0], streams[1], mcp._mcp_server.create_initialization_options())
     finally:
         _current_api_key.reset(token)
+
+
+# Custom handler for /messages/ that restores API key from session
+class MessagesAuthApp:
+    """ASGI app wrapper for sse.handle_post_message with API key restoration from session."""
+
+    def __init__(self, transport: SseServerTransport):
+        self.transport = transport
+
+    async def __call__(self, scope, receive, send):
+        # Only handle HTTP POST requests
+        if scope["type"] != "http" or scope.get("method") != "POST":
+            await send({"type": "http.response.start", "status": 405, "headers": []})
+            await send({"type": "http.response.body", "body": b"Method Not Allowed"})
+            return
+
+        # Extract session_id from query params
+        query_string = scope.get("query_string", b"").decode()
+        session_id = None
+        for pair in query_string.split("&"):
+            if pair.startswith("session_id="):
+                session_id = pair.split("=", 1)[1]
+                break
+
+        # Restore API key from session store
+        api_key = None
+        if session_id and session_id in _session_api_keys:
+            api_key = _session_api_keys[session_id]
+
+        if api_key:
+            token = _current_api_key.set(api_key)
+            try:
+                await self.transport.handle_post_message(scope, receive, send)
+            finally:
+                _current_api_key.reset(token)
+        else:
+            # No API key found, still try to handle (may work for stateless operations)
+            await self.transport.handle_post_message(scope, receive, send)
+
+
+messages_auth_app = MessagesAuthApp(sse)
 
 
 # Streamable HTTP Transport for MCP clients (Antigravity CLI, newer clients)
@@ -543,7 +742,7 @@ app = Starlette(
         # SSE endpoints (Claude Code compatibility)
         Route("/sse", endpoint=handle_sse, methods=["GET"]),
         Mount("/sse", app=streamable_http_app),  # Streamable HTTP on /sse (Antigravity) - POST only
-        Mount("/messages/", app=sse.handle_post_message),
+        Mount("/messages/", app=messages_auth_app),
         # Streamable HTTP endpoint at root (for /mcp after Caddy strips prefix)
         Mount("/", app=streamable_http_app),  # POST only
     ],

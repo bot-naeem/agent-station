@@ -1,7 +1,7 @@
 """create_tasks_table
 
 Revision ID: 5e08a74b22cd
-Revises: 4d97a63b12ef
+Revises: 3c86945a01bc
 Create Date: 2026-08-22 10:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '5e08a74b22cd'
-down_revision: Union[str, None] = '4d97a63b12ef'
+down_revision: Union[str, None] = '3c86945a01bc'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

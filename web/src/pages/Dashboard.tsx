@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { FileText, Bot, CheckSquare, TrendingUp } from 'lucide-react'
-import { markdownApi, todoApi } from '../services/api'
+import { FileText, Bot, KanbanSquare, TrendingUp, User } from 'lucide-react'
+import { markdownApi, tasksApi } from '../services/api'
 import { format } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
 import { clsx } from 'clsx'
+import { STATUS_COLOR, STATUS_ICON } from './Tasks/shared'
 
 interface StatCardProps {
   title: string
@@ -42,10 +44,13 @@ export function Dashboard() {
     ),
   })
 
-  const { data: todosData } = useQuery({
-    queryKey: ['dashboard-todos'],
-    queryFn: () => todoApi.list({ page_size: 5, status: 'pending' }),
+  const { data: tasksData } = useQuery({
+    queryKey: ['dashboard-tasks'],
+    queryFn: () => tasksApi.list({ page_size: 5 }),
   })
+
+  const activeTasks = tasksData?.items.filter(t => !['完成', '废弃'].includes(t.status)) ?? []
+  const totalActive = (tasksData?.total ?? 0) - (tasksData?.items.filter(t => ['完成', '废弃'].includes(t.status)).length ?? 0)
 
   const { data: recentLogs } = useQuery({
     queryKey: ['recent-logs'],
@@ -58,7 +63,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">仪表盘</h1>
-          <p className="text-gray-500 mt-1">概览你的 Agent 日志、待办和 RAG 系统</p>
+          <p className="text-gray-500 mt-1">概览你的 Agent 日志、任务和 RAG 系统</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -97,9 +102,9 @@ export function Dashboard() {
           color="bg-purple-100"
         />
         <StatCard
-          title="待办事项"
-          value={todosData?.items.filter(t => t.status !== 'done').length ?? 0}
-          icon={<CheckSquare className="h-8 w-8 text-white" />}
+          title="活跃任务"
+          value={totalActive}
+          icon={<KanbanSquare className="h-8 w-8 text-white" />}
           color="bg-orange-100"
         />
       </div>
@@ -119,9 +124,9 @@ export function Dashboard() {
                 <Bot className="h-4 w-4 mr-2" />
                 问答
               </a>
-              <a href="/todos" className="btn-secondary w-full justify-start">
-                <CheckSquare className="h-4 w-4 mr-2" />
-                管理待办事项
+              <a href="/tasks" className="btn-secondary w-full justify-start">
+                <KanbanSquare className="h-4 w-4 mr-2" />
+                进入任务中心
               </a>
             </div>
           </div>
@@ -185,39 +190,40 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* 待办事项 */}
+          {/* 任务中心 */}
           <div className="card">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">待办事项</h2>
-              <a href="/todos" className="text-sm text-primary-600 hover:text-primary-700">查看全部</a>
+              <h2 className="text-lg font-semibold text-gray-900">最近任务</h2>
+              <a href="/tasks" className="text-sm text-primary-600 hover:text-primary-700">进入任务中心</a>
             </div>
             <div className="divide-y divide-gray-100">
-              {todosData?.items.slice(0, 5).map((todo) => (
-                <div key={todo.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={todo.status}
-                      onChange={(e) => todoApi.update(todo.id, { status: e.target.value as 'pending' | 'in_progress' | 'done' })}
-                      className={`w-6 h-6 appearance-none border rounded text-center text-xs ${todo.status === 'done' ? 'bg-green-100 text-green-700' : todo.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      <option value="pending">○</option>
-                      <option value="in_progress">◐</option>
-                      <option value="done">●</option>
-                    </select>
-                    <div className="flex-1 min-w-0">
-                      <p className={clsx('text-sm font-medium truncate', todo.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900')}>
-                        {todo.title}
-                      </p>
-                      {todo.session_id && <span className="text-xs text-gray-400">Session 关联</span>}
+              {activeTasks.slice(0, 5).map((task) => {
+                const Icon = STATUS_ICON[task.status]
+                return (
+                  <a key={task.id} href="/tasks" className="block p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className={clsx(
+                        'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1',
+                        STATUS_COLOR[task.status],
+                      )}>
+                        <Icon className="h-3 w-3" />{task.status}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900">{task.title}</p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-1 text-xs text-gray-400">
+                        <User className="h-3 w-3" />
+                        {task.agent_name || '-'}
+                        <span className="ml-1 hidden sm:inline">
+                          {format(new Date(task.updated_at), 'MM-dd HH:mm', { locale: zhCN })}
+                        </span>
+                      </span>
                     </div>
-                    {todo.priority > 0 && (
-                      <span className="text-xs font-medium text-red-500">P{todo.priority}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {!todosData?.items.length && (
-                <div className="p-8 text-center text-gray-500">暂无待办事项</div>
+                  </a>
+                )
+              })}
+              {!activeTasks.length && (
+                <div className="p-8 text-center text-gray-500">暂无活跃任务，去任务中心分派一个吧</div>
               )}
             </div>
           </div>

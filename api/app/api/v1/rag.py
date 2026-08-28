@@ -54,7 +54,7 @@ async def rag_query(
     db: AsyncSession = Depends(get_db),
     current_agent = Depends(get_current_agent_or_admin),
 ):
-    """Single-shot RAG query with agent-based scoping"""
+    """Single-shot RAG query with agent-based scoping (logs + blogs)"""
     service = QnAService(db)
     can_read_all, own_name = _scope(current_agent)
     scope = _merge_scope_filters(payload.agent_name, payload.start_date, payload.end_date, can_read_all, own_name)
@@ -64,8 +64,9 @@ async def rag_query(
     filters.update({k: v for k, v in scope.items() if v})
 
     logs = await service.retrieve_logs(payload.query, **filters)
-    answer, sources = await service.synthesize_answer(payload.query, logs)
-    return RAGQueryResponse(answer=answer, sources=sources)
+    blogs = await service.retrieve_blogs(payload.query, **filters)
+    answer, sources = await service.synthesize_answer(payload.query, logs, blogs)
+    return RAGQueryResponse(answer=answer, sources=sources, query=payload.query)
 
 
 @router.post("/rag/chat")
@@ -74,7 +75,7 @@ async def rag_chat(
     db: AsyncSession = Depends(get_db),
     current_agent = Depends(get_current_agent_or_admin),
 ):
-    """Multi-turn RAG chat with agent-based scoping"""
+    """Multi-turn RAG chat with agent-based scoping (logs + blogs)"""
     user_messages = [m for m in payload.messages if m.role == "user"]
     if not user_messages:
         raise HTTPException(status_code=400, detail="No user message found")
@@ -89,7 +90,8 @@ async def rag_chat(
     filters.update({k: v for k, v in scope.items() if v})
 
     logs = await service.retrieve_logs(last_query, **filters)
-    answer, sources = await service.synthesize_answer(last_query, logs)
+    blogs = await service.retrieve_blogs(last_query, **filters)
+    answer, sources = await service.synthesize_answer(last_query, logs, blogs)
 
     return {
         "answer": answer,

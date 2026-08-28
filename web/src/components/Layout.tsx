@@ -1,13 +1,14 @@
 import { Outlet, Link, useLocation } from '@tanstack/react-router'
-import { LayoutDashboard, List, Bot, CheckSquare, Menu, X, Shield } from 'lucide-react'
+import { LayoutDashboard, List, Bot, Menu, X, Shield, FileText, KanbanSquare } from 'lucide-react'
 import { useState } from 'react'
 import { clsx } from 'clsx'
 
 const navigation = [
   { name: '仪表盘', href: '/', icon: LayoutDashboard },
   { name: '日志列表', href: '/logs', icon: List },
+  { name: '博客', href: '/blog', icon: FileText },
   { name: '问答', href: '/rag', icon: Bot },
-  { name: '待办事项', href: '/todos', icon: CheckSquare },
+  { name: '任务中心', href: '/tasks', icon: KanbanSquare },
   { name: 'Agent 管理', href: '/agents', icon: Shield },
 ]
 
@@ -36,7 +37,7 @@ export function Layout() {
                 <rect width="32" height="32" rx="6" fill="currentColor"/>
                 <path d="M8 12h16M8 16h12M8 20h8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
               </svg>
-              <span className="text-xl font-bold text-gray-900">Agent Log</span>
+              <span className="text-xl font-bold text-gray-900">Agent Station</span>
             </Link>
           </div>
           <nav className="flex flex-1 flex-col">
@@ -90,7 +91,7 @@ export function Layout() {
                   <rect width="32" height="32" rx="6" fill="currentColor"/>
                   <path d="M8 12h16M8 16h12M8 20h8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
                 </svg>
-                <span className="text-xl font-bold text-gray-900">Agent Log</span>
+<span className="text-xl font-bold text-gray-900">Agent Station</span>
               </Link>
             </div>
             <nav className="flex flex-1 flex-col">
@@ -126,7 +127,7 @@ export function Layout() {
       <div className="lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm lg:px-8">
           <h1 className="text-lg font-semibold text-gray-900">
-            {navigation.find((n) => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Agent Log'}
+            {navigation.find((n) => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Agent Station'}
           </h1>
         </header>
         <main className="py-6 px-4 lg:px-8">

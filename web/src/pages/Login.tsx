@@ -42,7 +42,7 @@ export function Login() {
               <path d="M8 12h16M8 16h12M8 20h8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Agent Log Platform</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Agent Station</h1>
           <p className="text-gray-500 mt-1">管理员登录</p>
         </div>
 

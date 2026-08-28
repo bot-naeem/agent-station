@@ -164,7 +164,7 @@ export function LogsList() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `agent-logs-${format(new Date(), 'yyyy-MM-dd')}.md`
+    a.download = `agent-station-logs-${format(new Date(), 'yyyy-MM-dd')}.md`
     a.click()
     URL.revokeObjectURL(url)
   }

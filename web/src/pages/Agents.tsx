@@ -251,8 +251,8 @@ function SkillTemplateModal({ onClose }: { onClose: () => void }) {
 /* ---------------------------- MCP 接入指南弹窗 ---------------------------- */
 
 function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose: () => void }) {
-  const keyHint = 'sk-alp-xxxxxxxxxxxx'
-  const addCommand = `claude mcp add agent-log --transport sse \\\n  "${MCP_SSE_URL}?api_key=${keyHint}"`
+  const keyHint = 'sk-as-xxxxxxxxxxxx'
+  const addCommand = `claude mcp add agent-station --transport sse \\\n  "${MCP_SSE_URL}?api_key=${keyHint}"`
 
   return (
     <Modal onClose={onClose} wide>
@@ -271,7 +271,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
             获取 API Key
           </h4>
           <p className="text-sm leading-relaxed text-gray-600">
-            在本页面点击「新建 Agent」创建账号，创建成功后会生成一次性 API Key（<code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">sk-alp-</code> 开头）。
+            在本页面点击「新建 Agent」创建账号，创建成功后会生成一次性 API Key（<code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">sk-as-</code> 开头）。
             {agent && <> 若该 Agent 的 Key 已丢失，可点击列表中的钥匙图标「轮换 Key」重新生成。</>}
           </p>
         </section>
@@ -291,7 +291,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
               code={`{
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "agent-log": {
+    "agent-station": {
       "type": "remote",
       "url": "${MCP_SSE_URL}?api_key=你的API_KEY"
     }
@@ -307,7 +307,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
               label="Antigravity CLI（编辑 ~/.gemini/config/mcp_config.json，全局生效；项目级放 ./.agents/mcp_config.json）"
               code={`{
   "mcpServers": {
-    "agent-log": {
+    "agent-station": {
       "serverUrl": "${MCP_SSE_URL}?api_key=你的API_KEY"
     }
   }
@@ -324,7 +324,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
             />
             <CopyBlock
               label="验证连接"
-              code={'claude mcp list\n# 应显示: agent-log ... ✓ Connected\n\nopencode\n# 会话内输入 /mcp 或直接调用工具，应显示: ● ✓ agent-log connected\n\nagy\n# 启动即自动拉取工具列表；日志排查看 ~/.gemini/antigravity-cli/cli.log'}
+              code={'claude mcp list\n# 应显示: agent-station ... ✓ Connected\n\nopencode\n# 会话内输入 /mcp 或直接调用工具，应显示: ● ✓ agent-station connected\n\nagy\n# 启动即自动拉取工具列表；日志排查看 ~/.gemini/antigravity-cli/cli.log'}
             />
           </div>
         </section>
@@ -361,29 +361,29 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
             把下面这段话连同命令一起粘贴给智能体，它就知道该做什么了：
           </p>
           <CopyBlock
-            code={`请接入 Agent Log 平台，用于记录你的工作日志。
+            code={`请接入 Agent Station 平台，用于记录你的工作日志。
 
 1. 根据你的客户端类型完成 MCP 连接（把 你的API_KEY 替换为实际值）:
 
    如果你是 Claude Code，执行命令:
-   claude mcp add agent-log --transport sse "${MCP_SSE_URL}?api_key=你的API_KEY"
-   然后执行 claude mcp list 确认 agent-log 显示 ✓ Connected
+   claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=你的API_KEY"
+   然后执行 claude mcp list 确认 agent-station 显示 ✓ Connected
 
    如果你是 OpenCode，编辑 ~/.config/opencode/opencode.json 添加:
    {
      "mcp": {
-       "agent-log": {
+       "agent-station": {
          "type": "remote",
          "url": "${MCP_SSE_URL}?api_key=你的API_KEY"
        }
      }
    }
-   保存后重启 OpenCode，确认 agent-log 显示 connected
+   保存后重启 OpenCode，确认 agent-station 显示 connected
 
 如果你是 Antigravity CLI (agy)，编辑 ~/.gemini/config/mcp_config.json 添加:
   {
     "mcpServers": {
-      "agent-log": {
+      "agent-station": {
         "serverUrl": "${MCP_SSE_URL}?api_key=你的API_KEY"
       }
     }
@@ -415,7 +415,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
         <section>
           <h4 className="mb-2 text-sm font-semibold text-gray-900">常见问题</h4>
           <div className="space-y-1.5 text-xs leading-relaxed text-gray-600">
-            <p>· <b>401 Unauthorized</b>：检查 api_key 参数名是下划线，且 Key 完整（含 sk-alp- 前缀）</p>
+            <p>· <b>401 Unauthorized</b>：检查 api_key 参数名是下划线，且 Key 完整（含 sk-as- 前缀）</p>
             <p>· <b>Key 丢失</b>：Key 仅创建时显示一次，丢失需在列表中轮换</p>
             <p>· <b>权限隔离</b>：普通 Agent 只能读写自己的日志，由 RBAC 自动控制</p>
           </div>
@@ -1083,7 +1083,7 @@ export function Agents() {
             <div className="mt-4 w-full text-left">
               <CopyBlock
                 label={`智能体连接命令（${keyDialog.agentName} 专用，已含真实 Key）`}
-                code={`claude mcp add agent-log --transport sse \\\n  "${MCP_SSE_URL}?api_key=${keyDialog.key}"`}
+                code={`claude mcp add agent-station --transport sse \\\n  "${MCP_SSE_URL}?api_key=${keyDialog.key}"`}
               />
             </div>
 

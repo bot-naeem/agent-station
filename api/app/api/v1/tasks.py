@@ -80,14 +80,25 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
     current = Depends(get_current_agent_or_admin),
 ):
-    """创建任务。重名报错，绝不覆盖。身份自动绑定 API Key。"""
+    """创建任务。重名报错，绝不覆盖。身份自动绑定 API Key。Admin 可指定 agent_id 分派任务。"""
     if not is_valid_status(payload.status):
         raise HTTPException(
             status_code=422,
             detail=f"无效状态 '{payload.status}'，可选：{'/'.join(TASK_STATUSES)}",
         )
 
-    agent_id = None if _is_admin(current) else current.id
+    is_admin = _is_admin(current)
+    # Admin 可指定 agent_id 分派任务；普通 Agent 自动绑定自己
+    if is_admin and payload.agent_id:
+        # 校验目标 agent 存在且 is_active=true
+        from app.models.agent import Agent
+        result = await db.execute(select(Agent).where(Agent.id == payload.agent_id, Agent.is_active == True))
+        target_agent = result.scalar_one_or_none()
+        if not target_agent:
+            raise HTTPException(status_code=404, detail=f"目标 Agent 不存在或已禁用: {payload.agent_id}")
+        agent_id = payload.agent_id
+    else:
+        agent_id = None if is_admin else current.id
 
     # 同 Agent 内重名校验
     dup_query = select(Task).where(func.lower(Task.title) == payload.title.strip().lower())

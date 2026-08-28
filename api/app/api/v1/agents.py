@@ -116,6 +116,52 @@ async def list_agents(
     )
 
 
+@router.get("/readable", response_model=PaginatedResponse[AgentListResponse])
+async def list_readable_agents(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_agent = Depends(get_current_agent_or_admin),
+):
+    """List agents readable by current agent (based on permissions)"""
+    from app.models.agent import AgentPermission
+    
+    if isinstance(current_agent, AdminUser):
+        query = select(Agent).where(Agent.is_active == True).order_by(Agent.created_at.desc())
+    else:
+        import json
+        readable = json.loads(current_agent.readable_agent_ids) if current_agent.readable_agent_ids else []
+        if readable:
+            from app.models.agent import Agent as AgentModel
+            readable_agents = await db.execute(
+                select(AgentModel.id).where(AgentModel.name.in_(readable))
+            )
+            readable_ids = [str(r[0]) for r in readable_agents.all()]
+            if readable_ids:
+                query = select(Agent).where(Agent.id.in_(readable_ids), Agent.is_active == True).order_by(Agent.created_at.desc())
+            else:
+                return PaginatedResponse(items=[], total=0, page=page, page_size=page_size, total_pages=0)
+        else:
+            query = select(Agent).where(Agent.id == current_agent.id, Agent.is_active == True)
+    
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query)
+    
+    query = query.offset((page - 1) * page_size).limit(page_size)
+    result = await db.execute(query)
+    agents = result.scalars().all()
+    
+    total_pages = (total + page_size - 1) // page_size
+    
+    return PaginatedResponse(
+        items=[a.to_dict() for a in agents],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
+
+
 @router.get("/me", response_model=AgentResponse)
 async def get_current_agent_info(
     current_agent = Depends(get_current_agent_or_admin),

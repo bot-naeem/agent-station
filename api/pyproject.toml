@@ -1,7 +1,7 @@
 [project]
-name = "agent-log-api"
+name = "agent-station-api"
 version = "0.1.0"
-description = "Agent Log Management Platform API"
+description = "Agent Station Platform API"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",

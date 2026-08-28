@@ -139,12 +139,30 @@ async def list_markdown_logs(
         for tag in params.tags:
             query = query.where(MarkdownLog.front_matter["tags"].contains([tag]))
     if params.query:
-        query = query.where(
-            or_(
-                MarkdownLog.title.ilike(f"%{params.query}%"),
-                MarkdownLog.summary.ilike(f"%{params.query}%"),
+        # 支持短语搜索：引号内的内容作为完整短语匹配，其余词作为 AND 条件
+        import re
+        phrases = re.findall(r'"([^"]+)"', params.query)
+        remaining = re.sub(r'"[^"]+"', '', params.query).strip()
+        words = [w for w in remaining.split() if w]
+        
+        conditions = []
+        for phrase in phrases:
+            conditions.append(
+                or_(
+                    MarkdownLog.title.ilike(f"%{phrase}%"),
+                    MarkdownLog.summary.ilike(f"%{phrase}%"),
+                )
             )
-        )
+        for word in words:
+            conditions.append(
+                or_(
+                    MarkdownLog.title.ilike(f"%{word}%"),
+                    MarkdownLog.summary.ilike(f"%{word}%"),
+                )
+            )
+        
+        if conditions:
+            query = query.where(or_(*conditions))
 
     # Count total
     count_query = select(func.count()).select_from(query.subquery())

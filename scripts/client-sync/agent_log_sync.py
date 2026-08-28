@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Agent Log Sync Client
-同步本地 markdown 日志到远程 Agent Log Platform
+Agent Station Sync Client
+同步本地 markdown 日志到远程 Agent Station Platform
 """
 
 import os
@@ -18,11 +18,11 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import frontmatter
 
-CONFIG_PATH = Path.home() / ".config" / "agent-log" / "config.yaml"
+CONFIG_PATH = Path.home() / ".config" / "agent-station" / "config.yaml"
 DEFAULT_CONFIG = {
     "api_url": "https://codingfamily.online/api/v1",
     "api_key": "",
-    "local_dir": "~/.agent-logs",
+    "local_dir": "~/.agent-station/logs",
     "sync_interval": 60,
     "watch": True,
     "batch_size": 10,

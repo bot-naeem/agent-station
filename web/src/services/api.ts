@@ -80,23 +80,52 @@ export interface MarkdownStats {
   top_tags: Array<{ tag: string; count: number }>
 }
 
-export interface Todo {
+export interface Task {
   id: string
-  session_id: string | null
+  agent_id: string
+  agent_name: string | null
   title: string
-  description: string | null
-  status: 'pending' | 'in_progress' | 'done'
-  priority: number
-  meta_data: Record<string, any>
+  status: '待办' | '进行中' | '阻塞' | '挂起' | '完成' | '废弃'
+  detail: string | null
+  tags: string[]
+  project: string | null
+  result: string | null
+  status_history: Array<{ from: string | null; to: string; at: string }>
   created_at: string
   updated_at: string
 }
 
-export interface TodoListParams {
-  session_id?: string
+export interface TaskListParams {
   status?: string
+  agent_id?: string
+  project?: string
+  tag?: string
   page?: number
   page_size?: number
+}
+
+export interface TaskCreate {
+  title: string
+  detail?: string
+  status?: '待办' | '进行中' | '阻塞' | '挂起' | '完成' | '废弃'
+  tags?: string[]
+  project?: string
+  agent_id?: string
+}
+
+export interface TaskCloseRequest {
+  id?: string
+  title?: string
+  status: '完成' | '废弃'
+  result?: string
+}
+
+export interface TaskListResponse {
+  items: Task[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
 }
 
 export interface RAGSource {
@@ -154,27 +183,6 @@ export const markdownApi = {
   },
 }
 
-export const todoApi = {
-  create: async (data: { session_id?: string; title: string; description?: string; priority?: number; meta_data?: any }) =>
-    (await api.post<Todo>('/todos', data)).data,
-
-  list: async (params: TodoListParams) =>
-    (await api.get<PaginatedResponse<Todo>>('/todos', { params })).data,
-
-  get: async (id: string) =>
-    (await api.get<Todo>(`/todos/${id}`)).data,
-
-  update: async (id: string, data: Partial<Todo>) =>
-    (await api.put<Todo>(`/todos/${id}`, data)).data,
-
-  batchUpdate: async (ids: string[], status?: string, priority?: number) =>
-    (await api.patch('/todos/batch', { ids, status, priority })).data,
-
-  delete: async (id: string) => {
-    await api.delete(`/todos/${id}`)
-  },
-}
-
 export const ragApi = {
   query: async (data: { query: string; session_id?: string; agent_type?: string; top_k?: number; score_threshold?: number; use_mmr?: boolean }) =>
     (await api.post<RAGQueryResponse>('/rag/query', data)).data,
@@ -194,6 +202,9 @@ export const healthApi = {
 export const agentApi = {
   list: async (params?: { page?: number; page_size?: number; is_active?: boolean }) =>
     (await api.get<PaginatedResponse<AgentResponse>>('/agents', { params })).data,
+
+  listReadable: async (params?: { page?: number; page_size?: number }) =>
+    (await api.get<PaginatedResponse<AgentResponse>>('/agents/readable', { params })).data,
 
   get: async (id: string) =>
     (await api.get<AgentResponse>(`/agents/${id}`)).data,
@@ -250,6 +261,41 @@ export interface AgentUpdate {
   is_active?: boolean
 }
 
+export interface BlogPost {
+  id: string
+  agent_id: string
+  agent_name: string | null
+  title: string
+  slug: string
+  summary: string | null
+  cover_image: string | null
+  status: 'draft' | 'published' | 'archived'
+  category: string | null
+  tags: string[]
+  published_at: string | null
+  created_at: string
+  updated_at: string
+  content?: string
+  front_matter?: Record<string, any>
+}
+
+export interface BlogPostListResponse {
+  items: BlogPost[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+export interface BlogStats {
+  total_posts: number
+  published_posts: number
+  draft_posts: number
+  by_category: Record<string, number>
+  by_agent: Record<string, number>
+  top_tags: Array<{ tag: string; count: number }>
+}
+
 export interface LoginRequest {
   username: string
   password: string
@@ -278,4 +324,72 @@ export const authApi = {
 
   me: async () =>
     (await api.get<{ id: string; username: string; display_name: string; email: string | null; is_superuser: boolean; is_active: boolean }>('/auth/me')).data,
+}
+
+export const tasksApi = {
+  create: async (data: TaskCreate) =>
+    (await api.post<Task>('/tasks', data)).data,
+
+  list: async (params: TaskListParams) =>
+    (await api.get<TaskListResponse>('/tasks', { params })).data,
+
+  get: async (id: string) =>
+    (await api.get<Task>(`/tasks/${id}`)).data,
+
+  update: async (id: string, data: Partial<TaskCreate & { result?: string }>) =>
+    (await api.patch<Task>(`/tasks/${id}`, data)).data,
+
+  close: async (id: string, data: TaskCloseRequest) =>
+    (await api.post<Task>('/tasks/close', { ...data, id })).data,
+
+  delete: async (id: string) => {
+    await api.delete(`/tasks/${id}`)
+  },
+}
+
+export const blogApi = {
+  create: async (data: {
+    title: string
+    slug?: string
+    summary?: string
+    cover_image?: string
+    category?: string
+    tags?: string[]
+    status?: 'draft' | 'published' | 'archived'
+    content: string
+  }) =>
+    (await api.post<BlogPost>('/blog', data)).data,
+
+  list: async (params: {
+    page?: number
+    page_size?: number
+    category?: string
+    tag?: string
+    status?: 'draft' | 'published' | 'archived'
+    query?: string
+    agent_name?: string
+  }) =>
+    (await api.get<BlogPostListResponse>('/blog', { params })).data,
+
+  stats: async () =>
+    (await api.get<BlogStats>('/blog/stats')).data,
+
+  get: async (identifier: string) =>
+    (await api.get<BlogPost>(`/blog/${identifier}`)).data,
+
+  update: async (id: string, data: Partial<{
+    title: string
+    slug: string
+    summary: string
+    cover_image: string
+    category: string
+    tags: string[]
+    status: 'draft' | 'published' | 'archived'
+    content: string
+  }>) =>
+    (await api.put<BlogPost>(`/blog/${id}`, data)).data,
+
+  delete: async (id: string) => {
+    await api.delete(`/blog/${id}`)
+  },
 }

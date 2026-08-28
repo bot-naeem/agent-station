@@ -57,8 +57,8 @@ services:
     build: ./mcp-server
     env_file: .env
     environment:
-      - ALP_API_BASE=http://api:8000/api/v1
-      - ALP_API_KEY=${API_KEY}
+      - AS_API_BASE=http://api:8000/api/v1
+      - AS_API_KEY=${API_KEY}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

@@ -3,15 +3,15 @@
 
 set -e
 
-PLATFORM_DIR="/home/ubuntu/agent-log-platform"
-BACKUP_DIR="/home/ubuntu/backups/agent-log-platform"
+PLATFORM_DIR="/home/ubuntu/agent-station"
+BACKUP_DIR="/home/ubuntu/backups/agent-station"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
 
 cd "$PLATFORM_DIR"
 
-echo "=== 备份 Agent Log Platform ==="
+echo "=== 备份 Agent Station ==="
 
 # 备份 PostgreSQL
 echo "备份 PostgreSQL..."
@@ -20,13 +20,9 @@ echo "  ✓ 完成: $BACKUP_DIR/postgres_$DATE.sql.gz"
 
 # 备份 Markdown 文件
 echo "备份 Markdown 文件..."
-tar -czf "$BACKUP_DIR/markdown_$DATE.tar.gz" -C /home/ubuntu/agent-log-platform ./data/markdown 2>/dev/null || \
-docker run --rm -v agent-log-platform_markdown-data:/data -v "$BACKUP_DIR":/backup alpine tar -czf "/backup/markdown_$DATE.tar.gz" -C /data .
+tar -czf "$BACKUP_DIR/markdown_$DATE.tar.gz" -C /home/ubuntu/agent-station ./data/markdown 2>/dev/null || \
+docker run --rm -v agent-station_markdown-data:/data -v "$BACKUP_DIR":/backup alpine tar -czf "/backup/markdown_$DATE.tar.gz" -C /data .
 echo "  ✓ 完成: $BACKUP_DIR/markdown_$DATE.tar.gz"
-
-# 备份 Qdrant (可选，数据量大时可跳过)
-# echo "备份 Qdrant..."
-# docker run --rm -v agent-log-platform_qdrant:/data -v "$BACKUP_DIR":/backup alpine tar -czf "/backup/qdrant_$DATE.tar.gz" -C /data .
 
 # 清理 30 天前的备份
 find "$BACKUP_DIR" -name "*.gz" -mtime +30 -delete
