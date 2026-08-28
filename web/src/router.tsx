@@ -3,7 +3,6 @@ import { Dashboard } from './pages/Dashboard'
 import { LogsList } from './pages/Logs/LogsList'
 import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
-import { Chat } from './pages/RAG/Chat'
 import { Agents } from './pages/Agents'
 import { Login } from './pages/Login'
 import { BlogsList, BlogDetail, BlogEditor } from './pages/Blogs'
@@ -37,12 +36,6 @@ const logDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/logs/$date/$agent/$fileName',
   component: LogDetail,
-})
-
-const ragRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/rag',
-  component: Chat,
 })
 
 const agentsRoute = createRoute({
@@ -92,7 +85,6 @@ const routeTree = rootRoute.addChildren([
   logsListRoute,
   logEditorRoute,
   logDetailRoute,
-  ragRoute,
   agentsRoute,
   blogsListRoute,
   blogDetailRoute,

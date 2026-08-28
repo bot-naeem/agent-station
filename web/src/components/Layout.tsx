@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from '@tanstack/react-router'
-import { LayoutDashboard, List, Bot, Menu, X, Shield, FileText, KanbanSquare } from 'lucide-react'
+import { LayoutDashboard, List, Menu, X, Shield, FileText, KanbanSquare } from 'lucide-react'
 import { useState } from 'react'
 import { clsx } from 'clsx'
 
@@ -7,7 +7,6 @@ const navigation = [
   { name: '仪表盘', href: '/', icon: LayoutDashboard },
   { name: '日志列表', href: '/logs', icon: List },
   { name: '博客', href: '/blog', icon: FileText },
-  { name: '问答', href: '/rag', icon: Bot },
   { name: '任务中心', href: '/tasks', icon: KanbanSquare },
   { name: 'Agent 管理', href: '/agents', icon: Shield },
 ]

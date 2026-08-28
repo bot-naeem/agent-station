@@ -11,8 +11,7 @@ db_url = settings.database_url
 if db_url.startswith("postgresql://") and "+asyncpg" not in db_url:
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# 使用 NullPool：Celery 任务每次 asyncio.run() 新建 event loop，
-# 连接池复用旧 loop 连接会导致 "attached to a different loop" 错误
+# 使用 NullPool：每次请求新建连接，避免异步上下文下的连接复用问题
 engine = create_async_engine(
     db_url,
     echo=False,

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-import httpx
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -27,22 +26,10 @@ async def health_check(
     except Exception:
         db_status = "unhealthy"
 
-    # Check LLM (MiniMax)
-    llm_status = "healthy"
-    if not settings.llm_api_key:
-        llm_status = "unhealthy"
+    # Check LLM API key configured
+    llm_status = "healthy" if settings.llm_api_key else "degraded"
 
-    # Check Redis
-    redis_status = "healthy"
-    try:
-        import redis.asyncio as redis
-        r = redis.from_url(settings.redis_url)
-        await r.ping()
-        await r.close()
-    except Exception:
-        redis_status = "unhealthy"
-
-    overall = "healthy" if all(s == "healthy" for s in [db_status, llm_status, redis_status]) else "degraded"
+    overall = "healthy" if all(s == "healthy" for s in [db_status, llm_status]) else "degraded"
 
     return HealthResponse(
         status=overall,

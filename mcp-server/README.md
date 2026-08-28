@@ -8,8 +8,7 @@ MCP (Model Context Protocol) server providing standardized access to the Agent S
 |------|-------------|
 | `write_log` | Write markdown log entries |
 | `read_logs` | Read recent logs with filtering |
-| `rag_query` | RAG-powered Q&A over stored logs |
-| `search_logs` | Full-text search across logs |
+| `search_logs` | Full-text + phrase search across logs |
 | `get_stats` | Statistics dashboard data |
 
 ## Quick Start

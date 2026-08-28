@@ -63,7 +63,7 @@ export function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">仪表盘</h1>
-          <p className="text-gray-500 mt-1">概览你的 Agent 日志、任务和 RAG 系统</p>
+          <p className="text-gray-500 mt-1">概览你的 Agent 日志和任务</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -119,10 +119,6 @@ export function Dashboard() {
               <a href="/logs" className="btn-secondary w-full justify-start">
                 <FileText className="h-4 w-4 mr-2" />
                 浏览日志列表
-              </a>
-              <a href="/rag" className="btn-primary w-full justify-start">
-                <Bot className="h-4 w-4 mr-2" />
-                问答
               </a>
               <a href="/tasks" className="btn-secondary w-full justify-start">
                 <KanbanSquare className="h-4 w-4 mr-2" />

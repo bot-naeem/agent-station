@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Agent Log Management Platform API",
-    description="Agent 日志管理、RAG 检索、待办事务平台",
+    title="Agent Station API",
+    description="Agent 日志管理、任务管理、博客发布平台",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -40,7 +40,7 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/")
 async def root():
     return {
-        "name": "Agent Log Management Platform API",
+        "name": "Agent Station API",
         "version": "0.1.0",
         "docs": "/docs",
         "health": "/api/v1/health",

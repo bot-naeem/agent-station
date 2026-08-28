@@ -128,31 +128,6 @@ export interface TaskListResponse {
   total_pages: number
 }
 
-export interface RAGSource {
-  markdown_log_id: string
-  session_id: string | null
-  agent_type: string
-  log_date: string
-  file_path: string
-  title: string | null
-  chunk_content: string
-  score: number
-}
-
-export interface RAGQueryResponse {
-  answer: string
-  sources: RAGSource[]
-  query: string
-}
-
-export interface RAGChatRequest {
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
-  session_id?: string
-  agent_type?: string
-  top_k?: number
-  temperature?: number
-}
-
 // API 方法 - 所有方法直接返回数据（已解包 AxiosResponse）
 export const markdownApi = {
   create: async (data: { content: string; session_id?: string; agent_type: string; log_date?: string; front_matter?: any }) =>
@@ -181,17 +156,6 @@ export const markdownApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })).data
   },
-}
-
-export const ragApi = {
-  query: async (data: { query: string; session_id?: string; agent_type?: string; top_k?: number; score_threshold?: number; use_mmr?: boolean }) =>
-    (await api.post<RAGQueryResponse>('/rag/query', data)).data,
-
-  chat: async (data: RAGChatRequest) =>
-    (await api.post<{ answer: string; sources: RAGSource[] }>('/rag/chat', data)).data,
-
-  stats: async () =>
-    (await api.get('/rag/stats')).data,
 }
 
 export const healthApi = {

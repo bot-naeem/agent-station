@@ -22,13 +22,6 @@ from app.schemas.todo import (
     TodoListParams,
     TodoBatchUpdate,
 )
-from app.schemas.rag import (
-    RAGQueryRequest,
-    RAGSource,
-    RAGQueryResponse,
-    RAGChatMessage,
-    RAGChatRequest,
-)
 from app.schemas.agent import (
     AgentCreate,
     AgentUpdate,
@@ -68,11 +61,6 @@ __all__ = [
     "TodoResponse",
     "TodoListParams",
     "TodoBatchUpdate",
-    "RAGQueryRequest",
-    "RAGSource",
-    "RAGQueryResponse",
-    "RAGChatMessage",
-    "RAGChatRequest",
     "AgentCreate",
     "AgentUpdate",
     "AgentPermissionUpdate",

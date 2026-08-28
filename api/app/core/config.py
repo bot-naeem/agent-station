@@ -18,9 +18,6 @@ class Settings(BaseSettings):
     postgres_db: str = "agent_station"
     database_url: str = "postgresql://agentstation:changeme@postgres:5432/agent_station"
 
-    # Redis
-    redis_url: str = "redis://redis:6379/0"
-
     # LLM (MiniMax, Anthropic-compatible protocol)
     llm_api_base: str = "https://api.minimaxi.com/anthropic"
     llm_api_key: str = ""
