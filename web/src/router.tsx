@@ -1,6 +1,6 @@
 import { createRouter, createRootRoute, createRoute } from '@tanstack/react-router'
 import { Dashboard } from './pages/Dashboard'
-import { LogsList } from './pages/Logs/LogFeed'
+import { LogsList } from './pages/Logs/LogsList'
 import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
 import { Agents } from './pages/Agents'
