@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { LayoutDashboard, List, Menu, X, Shield, FileText, KanbanSquare, LogIn, LogOut, KeyRound, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { LayoutDashboard, List, Menu, X, Shield, FileText, KanbanSquare, LogIn, LogOut, KeyRound, User, ChevronDown } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { clsx } from 'clsx'
 import { authApi } from '../services/api'
 
@@ -92,6 +92,22 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+function useClickOutside(ref: React.RefObject<HTMLElement>, onClose: () => void, enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [ref, onClose, enabled])
+}
+
 export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -99,8 +115,15 @@ export function Layout() {
   const [user, setUser] = useState<{ username: string; display_name: string } | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [showPwdModal, setShowPwdModal] = useState(false)
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+  const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false)
+  const headerMenuRef = useRef<HTMLDivElement>(null)
+  const sidebarMenuRef = useRef<HTMLDivElement>(null)
 
   const isLogin = location.pathname === '/login'
+
+  useClickOutside(headerMenuRef, () => setHeaderMenuOpen(false), headerMenuOpen)
+  useClickOutside(sidebarMenuRef, () => setSidebarMenuOpen(false), sidebarMenuOpen)
 
   useEffect(() => {
     let cancelled = false
@@ -124,6 +147,8 @@ export function Layout() {
       await authApi.logout()
     } catch { /* ignore */ }
     setUser(null)
+    setHeaderMenuOpen(false)
+    setSidebarMenuOpen(false)
     navigate({ to: '/login' })
   }
 
@@ -172,33 +197,42 @@ export function Layout() {
                 </ul>
               </li>
               <li className="mt-auto">
-                <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
-                  {authChecked && user ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
-                          {user.display_name.slice(0, 1).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium leading-none text-gray-900">{user.display_name}</div>
-                          <div className="truncate text-xs text-gray-500">@{user.username}</div>
-                        </div>
+                {authChecked && user ? (
+                  <div ref={sidebarMenuRef} className="relative">
+                    <button
+                      onClick={() => setSidebarMenuOpen((v) => !v)}
+                      className="flex w-full items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 text-left hover:bg-white hover:border-gray-200 transition-colors"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
+                        {user.display_name.slice(0, 1).toUpperCase()}
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button onClick={() => setShowPwdModal(true)} className="inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-white hover:ring-gray-300">
-                          <KeyRound className="h-3 w-3" /> 密码
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium leading-none text-gray-900">{user.display_name}</div>
+                        <div className="truncate text-xs text-gray-500">@{user.username}</div>
+                      </div>
+                      <ChevronDown className={clsx('h-4 w-4 text-gray-400 transition-transform', sidebarMenuOpen && 'rotate-180')} />
+                    </button>
+                    {sidebarMenuOpen && (
+                      <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-gray-100 bg-white p-1.5 shadow-lg">
+                        <div className="px-3 py-2">
+                          <div className="text-sm font-medium text-gray-900">{user.display_name}</div>
+                          <div className="text-xs text-gray-500">@{user.username}</div>
+                        </div>
+                        <div className="my-1 h-px bg-gray-100" />
+                        <button onClick={() => { setSidebarMenuOpen(false); setShowPwdModal(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          <KeyRound className="h-4 w-4 text-gray-400" /> 修改密码
                         </button>
-                        <button onClick={handleLogout} className="inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50">
-                          <LogOut className="h-3 w-3" /> 退出
+                        <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                          <LogOut className="h-4 w-4" /> 退出登录
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <Link to="/login" className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-black">
-                      <LogIn className="h-4 w-4" /> 登录
-                    </Link>
-                  )}
-                </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link to="/login" className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-black">
+                    <LogIn className="h-4 w-4" /> 登录
+                  </Link>
+                )}
               </li>
             </ul>
           </nav>
@@ -255,9 +289,9 @@ export function Layout() {
                   )
                 })}
               </ul>
-              <div className="mt-auto rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+              <div className="mt-auto">
                 {authChecked && user ? (
-                  <div className="space-y-3">
+                  <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
                         {user.display_name.slice(0, 1).toUpperCase()}
@@ -267,8 +301,8 @@ export function Layout() {
                         <div className="truncate text-xs text-gray-500">@{user.username}</div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">密码</button>
+                    <div className="mt-3 grid grid-cols-2 gap-1.5">
+                      <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">修改密码</button>
                       <button onClick={() => { setMobileMenuOpen(false); handleLogout() }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">退出</button>
                     </div>
                   </div>
@@ -289,17 +323,33 @@ export function Layout() {
           </h1>
           <div className="flex items-center gap-2">
             {authChecked && user ? (
-              <>
-                <span className="hidden items-center gap-1.5 text-sm text-gray-600 sm:inline-flex">
-                  <User className="h-4 w-4 text-gray-400" /> {user.display_name}
-                </span>
-                <button onClick={() => setShowPwdModal(true)} className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                  <KeyRound className="h-3.5 w-3.5" /> 修改密码
+              <div ref={headerMenuRef} className="relative">
+                <button
+                  onClick={() => setHeaderMenuOpen((v) => !v)}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white pl-1 pr-3 py-1 hover:bg-gray-50"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
+                    {user.display_name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="hidden text-sm font-medium text-gray-700 sm:inline">{user.display_name}</span>
+                  <ChevronDown className={clsx('h-4 w-4 text-gray-400 transition-transform', headerMenuOpen && 'rotate-180')} />
                 </button>
-                <button onClick={handleLogout} className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
-                  <LogOut className="h-3.5 w-3.5" /> 退出
-                </button>
-              </>
+                {headerMenuOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-gray-100 bg-white p-1.5 shadow-lg">
+                    <div className="px-3 py-2">
+                      <div className="text-sm font-medium text-gray-900">{user.display_name}</div>
+                      <div className="text-xs text-gray-500">@{user.username}</div>
+                    </div>
+                    <div className="my-1 h-px bg-gray-100" />
+                    <button onClick={() => { setHeaderMenuOpen(false); setShowPwdModal(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <KeyRound className="h-4 w-4 text-gray-400" /> 修改密码
+                    </button>
+                    <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                      <LogOut className="h-4 w-4" /> 退出登录
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <Link to="/login" className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
                 <LogIn className="h-4 w-4" /> 登录
