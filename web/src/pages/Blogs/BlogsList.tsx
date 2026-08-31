@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearch, useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { FileText, Tag, Calendar, User, Clock, Search, Filter, ChevronDown, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
 
@@ -38,7 +37,7 @@ interface BlogStats {
 }
 
 function statusLabel(s: 'draft' | 'published' | 'archived' | string) {
-  const map: Record<string, string> = { published: '已发布', draft: '草稿', archived: '归档' };
+  const map: Record<string, string> = { published: 'Published', draft: 'Draft', archived: 'Archived' };
   return map[s] || s;
 }
 
@@ -138,13 +137,13 @@ export function BlogsList() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <h1 className="text-2xl font-bold text-gray-900">博客</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Blog</h1>
             <Link
               to="/blog/editor/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
             >
               <FileText className="h-4 w-4" />
-              新建文章
+              New Post
             </Link>
           </div>
 
@@ -157,7 +156,7 @@ export function BlogsList() {
                   type="text"
                   value={filters.query}
                   onChange={e => handleFilterChange('query', e.target.value)}
-                  placeholder="搜索标题、摘要、内容..."
+                  placeholder="Search title, summary, content..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                 />
               </div>
@@ -167,7 +166,7 @@ export function BlogsList() {
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Filter className="h-4 w-4" />
-                筛选
+                Filters
                 <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
             </form>
@@ -179,7 +178,7 @@ export function BlogsList() {
                   onChange={e => handleFilterChange('category', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
                 >
-                  <option value="">全部分类</option>
+                  <option value="">All Categories</option>
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <select
@@ -187,7 +186,7 @@ export function BlogsList() {
                   onChange={e => handleFilterChange('tag', e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
                 >
-                  <option value="">全部标签</option>
+                  <option value="">All Tags</option>
                   {tags.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 {(filters.category || filters.tag) && (
@@ -203,7 +202,7 @@ export function BlogsList() {
                     }}
                     className="px-3 py-2 text-sm text-primary-600 hover:text-primary-700"
                   >
-                    清除筛选
+                    Clear Filters
                   </button>
                 )}
               </div>
@@ -216,11 +215,11 @@ export function BlogsList() {
       {stats && (
         <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            <span className="font-medium text-gray-900">统计：</span>
-            <span>总计 <strong className="text-gray-900">{stats.total_posts}</strong> 篇</span>
-            <span className="text-emerald-600">已发布 {stats.published_posts}</span>
-            <span className="text-amber-600">草稿 {stats.draft_posts}</span>
-            <span>分类 {Object.keys(stats.by_category).length}</span>
+            <span className="font-medium text-gray-900">Stats:</span>
+            <span>Total <strong className="text-gray-900">{stats.total_posts}</strong> posts</span>
+            <span className="text-emerald-600">Published {stats.published_posts}</span>
+            <span className="text-amber-600">Draft {stats.draft_posts}</span>
+            <span>Categories {Object.keys(stats.by_category).length}</span>
           </div>
         </div>
       )}
@@ -245,14 +244,14 @@ export function BlogsList() {
         ) : blogs.length === 0 ? (
           <div className="text-center py-16">
             <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">暂无博客文章</h3>
-            <p className="text-gray-500 mb-6">还没有发布的博客，快去创建第一篇吧！</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No blog posts yet</h3>
+            <p className="text-gray-500 mb-6">No published blogs yet. Create the first one!</p>
             <Link
               to="/blog/editor/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               <FileText className="h-4 w-4" />
-              新建文章
+              New Post
             </Link>
           </div>
         ) : (
@@ -308,11 +307,11 @@ export function BlogsList() {
                     <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-100 pt-4">
                       <div className="flex items-center gap-1.5">
                         <User className="h-3.5 w-3.5" />
-                        <span>{blog.agent_name || '未知作者'}</span>
+                        <span>{blog.agent_name || 'Unknown Author'}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5" />
-                        <span>{blog.published_at ? format(new Date(blog.published_at), 'yyyy-MM-dd', { locale: zhCN }) : format(new Date(blog.created_at), 'yyyy-MM-dd', { locale: zhCN })}</span>
+                        <span>{blog.published_at ? format(new Date(blog.published_at), 'yyyy-MM-dd') : format(new Date(blog.created_at), 'yyyy-MM-dd')}</span>
                       </div>
                     </div>
                   </div>
@@ -328,17 +327,17 @@ export function BlogsList() {
                   disabled={page <= 1}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
-                  上一页
+                  Previous
                 </button>
                 <span className="px-3 py-2 text-sm text-gray-600">
-                  第 {page} 页 / 共 {Math.ceil(total / pageSize)} 页
+                  Page {page} of {Math.ceil(total / pageSize)}
                 </span>
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={page >= Math.ceil(total / pageSize)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                 >
-                  下一页
+                  Next
                 </button>
               </div>
             )}

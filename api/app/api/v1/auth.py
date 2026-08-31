@@ -55,13 +55,13 @@ async def login(
     if not user or not user.verify_password(payload.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误",
+            detail="Invalid username or password",
         )
     
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="账号已禁用",
+            detail="Account disabled",
         )
     
     # 更新最后登录时间
@@ -87,7 +87,7 @@ async def logout(response: Response):
     """登出"""
     from app.core.auth import clear_auth_cookie
     clear_auth_cookie(response)
-    return {"message": "已登出"}
+    return {"message": "Logged out"}
 
 
 @router.post("/change-password")
@@ -109,28 +109,28 @@ async def change_password(
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
     if not token:
-        raise HTTPException(status_code=401, detail="未登录")
+        raise HTTPException(status_code=401, detail="Not logged in")
 
     settings = get_settings()
     try:
         data = jwt.decode(token, settings.api_secret_key, algorithms=["HS256"])
     except Exception:
-        raise HTTPException(status_code=401, detail="Token 无效")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     result = await db.execute(select(AdminUser).where(AdminUser.id == UUID(data["sub"])))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+        raise HTTPException(status_code=401, detail="User not found or disabled")
 
     if not user.verify_password(payload.old_password):
-        raise HTTPException(status_code=400, detail="原密码错误")
+        raise HTTPException(status_code=400, detail="Incorrect current password")
 
     if len(payload.new_password) < 6:
-        raise HTTPException(status_code=400, detail="新密码至少 6 位")
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
 
     user.password_hash = AdminUser.hash_password(payload.new_password)
     await db.commit()
-    return {"message": "密码修改成功"}
+    return {"message": "Password updated successfully"}
 
 
 @router.get("/me")
@@ -153,7 +153,7 @@ async def get_current_user(
             token = auth_header.split(" ")[1]
     
     if not token:
-        raise HTTPException(status_code=401, detail="未登录")
+        raise HTTPException(status_code=401, detail="Not logged in")
     
     import jwt
     from app.core.config import get_settings
@@ -161,7 +161,7 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, settings.api_secret_key, algorithms=["HS256"])
     except Exception:
-        raise HTTPException(status_code=401, detail="Token 无效")
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     from uuid import UUID
     from app.models.admin_user import AdminUser
@@ -173,7 +173,7 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     
     if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+        raise HTTPException(status_code=401, detail="User not found or disabled")
     
     from app.schemas.admin_user import AdminUserResponse
     return AdminUserResponse.from_orm(user)
@@ -190,11 +190,11 @@ async def refresh_token(
     
     token = request.cookies.get("admin_token")
     if not token:
-        raise HTTPException(status_code=401, detail="未登录")
+        raise HTTPException(status_code=401, detail="Not logged in")
     
     payload = decode_token(token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Token 无效")
+        raise HTTPException(status_code=401, detail="Invalid token")
     
     # 生成新 token
     new_token = create_access_token(

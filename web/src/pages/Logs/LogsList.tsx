@@ -5,7 +5,7 @@ import {
   X, Inbox, SlidersHorizontal, Sparkles, Users, CalendarDays, Pencil, Loader2,
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { markdownApi, type MarkdownLog, type MarkdownLogSearchParams } from '../../services/api'
 import { MarkdownViewer } from '../../components/MarkdownViewer'
 import { clsx } from 'clsx'
@@ -13,7 +13,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 const PAGE_SIZES = [10, 20, 50]
 
-/* ---------------------------- 工具函数 ---------------------------- */
+/* ---------------------------- utils ---------------------------- */
 
 const AVATAR_STYLES = [
   'from-sky-500 to-blue-600',
@@ -42,7 +42,7 @@ function initials(name: string) {
 
 function timeAgo(iso: string) {
   try {
-    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: zhCN })
+    return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: enUS })
   } catch {
     return ''
   }
@@ -60,7 +60,7 @@ function displayName(log: MarkdownLog) {
   return log.agent_name || log.agent_type
 }
 
-/* ---------------------------- 全文懒加载容器 ---------------------------- */
+/* ---------------------------- FullContent lazy container ---------------------------- */
 
 function FullLogView({ log }: { log: MarkdownLog }) {
   const [full, setFull] = useState<MarkdownLog | null>(log.content !== undefined ? log : null)
@@ -76,7 +76,7 @@ function FullLogView({ log }: { log: MarkdownLog }) {
     let alive = true
     markdownApi.get(log.id)
       .then(data => { if (alive) setFull(data) })
-      .catch(e => { if (alive) setErr(e.response?.data?.detail || '加载失败') })
+      .catch(e => { if (alive) setErr(e.response?.data?.detail || 'Failed to load') })
     return () => { alive = false }
   }, [full, log])
 
@@ -85,7 +85,7 @@ function FullLogView({ log }: { log: MarkdownLog }) {
     return (
       <div className="flex flex-1 items-center justify-center gap-2 py-10 text-sm text-gray-400">
         <Loader2 className="h-4 w-4 animate-spin" />
-        加载全文中…
+        Loading full content...
       </div>
     )
   }
@@ -104,17 +104,17 @@ function FullLogView({ log }: { log: MarkdownLog }) {
         </div>
       )}
       <div className="flex-1 overflow-auto px-6 py-5 scrollbar-thin">
-        <MarkdownViewer content={full.content || '*（空日志）*'} />
+        <MarkdownViewer content={full.content || '*Empty log*'} />
       </div>
       <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50/60 px-6 py-2.5">
         <span className="truncate font-mono text-[11px] text-gray-300">{full.file_path}</span>
-        <span className="shrink-0 text-[11px] text-gray-300">点击右上角「编辑」进入全屏分屏编辑</span>
+        <span className="shrink-0 text-[11px] text-gray-300">Click Edit in the top-right to open fullscreen editor</span>
       </div>
     </>
   )
 }
 
-/* ---------------------------------- 主组件 ---------------------------------- */
+/* ---------------------------------- Main component ---------------------------------- */
 
 export function LogsList() {
   const queryClient = useQueryClient()
@@ -132,14 +132,14 @@ export function LogsList() {
     placeholderData: (previous) => previous,
   })
 
-  // 全屏编辑器保存后刷新列表
+  // Refresh list after fullscreen editor saves
   useEffect(() => {
     const invalidate = () => queryClient.invalidateQueries({ queryKey: ['markdown-logs'] })
     window.addEventListener('alp:invalidate-logs', invalidate)
     return () => window.removeEventListener('alp:invalidate-logs', invalidate)
   }, [queryClient])
 
-  /* ------------------------------ 操作 ------------------------------ */
+  /* ------------------------------ Actions ------------------------------ */
 
   const handleFilterChange = (key: keyof MarkdownLogSearchParams, value: any) => {
     setSearchParams(prev => ({ ...prev, [key]: value, page: 1 }))
@@ -178,34 +178,34 @@ export function LogsList() {
 
   const todayStr = format(new Date(), 'yyyy-MM-dd')
   const stats = data ? [
-    { label: '日志总数', value: String(data.total), icon: FileText, tone: 'bg-sky-50 text-sky-600' },
-    { label: '今日新增', value: String(data.items.filter(l => l.log_date === todayStr).length), icon: Sparkles, tone: 'bg-emerald-50 text-emerald-600' },
-    { label: '活跃 Agent', value: String(new Set(data.items.map(displayName)).size), icon: Users, tone: 'bg-violet-50 text-violet-600' },
-    { label: 'Tokens 总量', value: `${(data.items.reduce((s, l) => s + (l.tokens_estimate || 0), 0) / 1000).toFixed(1)}k`, icon: Clock, tone: 'bg-amber-50 text-amber-600' },
+    { label: 'Total Logs', value: String(data.total), icon: FileText, tone: 'bg-sky-50 text-sky-600' },
+    { label: 'Today', value: String(data.items.filter(l => l.log_date === todayStr).length), icon: Sparkles, tone: 'bg-emerald-50 text-emerald-600' },
+    { label: 'Active Agents', value: String(new Set(data.items.map(displayName)).size), icon: Users, tone: 'bg-violet-50 text-violet-600' },
+    { label: 'Total Tokens', value: `${(data.items.reduce((s, l) => s + (l.tokens_estimate || 0), 0) / 1000).toFixed(1)}k`, icon: Clock, tone: 'bg-amber-50 text-amber-600' },
   ] : []
 
-  /* ------------------------------ 渲染 ------------------------------ */
+  /* ------------------------------ Render ------------------------------ */
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      {/* 页头 */}
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25">
             <FileText className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">日志列表</h1>
-            <p className="text-sm text-gray-500">所有 Agent 的工作记录 · 点击行内 ✏️ 进入全屏编辑</p>
+            <h1 className="text-lg font-bold text-gray-900">Logs</h1>
+            <p className="text-sm text-gray-500">All Agent work logs · Click ✏️ to edit fullscreen</p>
           </div>
         </div>
         <button onClick={handleExport} className="btn-secondary self-start sm:self-auto">
           <Download className="mr-1.5 h-4 w-4" />
-          导出
+          Export
         </button>
       </div>
 
-      {/* 统计卡片 */}
+      {/* Stat cards */}
       {data && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map(s => (
@@ -222,14 +222,14 @@ export function LogsList() {
         </div>
       )}
 
-      {/* 搜索 + 筛选栏 */}
+      {/* Search + Filter bar */}
       <div className="card p-3">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="搜索日志标题、摘要…"
+              placeholder="Search logs by title, summary..."
               value={searchParams.query || ''}
               onChange={(e) => handleFilterChange('query', e.target.value || undefined)}
               className="input border-transparent bg-gray-50 pl-9 focus:border-primary-500 focus:bg-white"
@@ -253,7 +253,7 @@ export function LogsList() {
             )}
           >
             <SlidersHorizontal className="h-4 w-4" />
-            筛选
+            Filter
             {activeFilterCount > 0 && (
               <span className={clsx(
                 'ml-0.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold',
@@ -268,26 +268,26 @@ export function LogsList() {
         {showFilters && (
           <div className="mt-3 grid gap-3 border-t border-gray-100 pt-3 md:grid-cols-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Agent 类型</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Agent Type</label>
               <select
                 value={searchParams.agent_type || ''}
                 onChange={(e) => handleFilterChange('agent_type', e.target.value || undefined)}
                 className="input"
               >
-                <option value="">全部</option>
+                <option value="">All</option>
                 {agentTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">开始日期</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Start Date</label>
               <input type="date" value={searchParams.start_date || ''} onChange={(e) => handleFilterChange('start_date', e.target.value || undefined)} className="input" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">结束日期</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500">End Date</label>
               <input type="date" value={searchParams.end_date || ''} onChange={(e) => handleFilterChange('end_date', e.target.value || undefined)} className="input" />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">标签</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500">Tags</label>
               <input
                 type="text"
                 placeholder="docker, rag"
@@ -300,7 +300,7 @@ export function LogsList() {
         )}
       </div>
 
-      {/* 日志 Feed 流 */}
+      {/* Log Feed */}
       <div className="card">
         {isLoading ? (
           <div className="divide-y divide-gray-100">
@@ -325,9 +325,9 @@ export function LogsList() {
               <Inbox className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{searchParams.query || activeFilterCount > 0 ? '没有匹配的日志' : '还没有日志'}</p>
+              <p className="font-semibold text-gray-900">{searchParams.query || activeFilterCount > 0 ? 'No matching logs' : 'No logs yet'}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {searchParams.query || activeFilterCount > 0 ? '试试调整搜索关键词或清除筛选条件' : 'Agent 通过 MCP 写入的日志会实时出现在这里'}
+                {searchParams.query || activeFilterCount > 0 ? 'Try adjusting search or clearing filters' : 'Logs written via MCP will appear here in real time'}
               </p>
             </div>
           </div>
@@ -335,14 +335,14 @@ export function LogsList() {
           <>
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-2.5">
               <span className="text-xs text-gray-400">
-                共 <span className="font-semibold text-gray-600">{data.total}</span> 条 · 第 {data.page}/{data.total_pages} 页
+                Total <span className="font-semibold text-gray-600">{data.total}</span> · Page {data.page}/{data.total_pages}
               </span>
               <select
                 value={searchParams.page_size}
                 onChange={(e) => handleFilterChange('page_size', parseInt(e.target.value))}
                 className="cursor-pointer rounded-md border-0 bg-transparent pr-6 text-xs text-gray-500 focus:ring-0"
               >
-                {PAGE_SIZES.map(s => <option key={s} value={s}>{s} 条/页</option>)}
+                {PAGE_SIZES.map(s => <option key={s} value={s}>{s} per page</option>)}
               </select>
             </div>
 
@@ -378,7 +378,7 @@ export function LogsList() {
                         </div>
 
                         <h3 className="mt-1 truncate text-[15px] font-medium text-gray-800 group-hover:text-primary-700">
-                          {log.title || log.file_path.split('/').pop()?.replace('.md', '') || '无标题日志'}
+                          {log.title || log.file_path.split('/').pop()?.replace('.md', '') || 'Untitled'}
                         </h3>
 
                         {log.summary && (
@@ -414,7 +414,7 @@ export function LogsList() {
                       <div className="flex shrink-0 items-center gap-1 self-center opacity-0 transition-opacity group-hover:opacity-100">
                         <button
                           onClick={(e) => { e.stopPropagation(); openEditor(log) }}
-                          title="全屏编辑"
+                          title="Edit fullscreen"
                           className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-primary-50 hover:text-primary-600"
                         >
                           <Pencil className="h-4 w-4" />
@@ -434,7 +434,7 @@ export function LogsList() {
                   disabled={data.page === 1}
                   className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent"
                 >
-                  <ChevronLeft className="h-4 w-4" />上一页
+                  <ChevronLeft className="h-4 w-4" />Prev
                 </button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(data.total_pages, 7) }, (_, i) => {
@@ -464,7 +464,7 @@ export function LogsList() {
                   disabled={data.page === data.total_pages}
                   className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent"
                 >
-                  下一页<ChevronRight className="h-4 w-4" />
+                  Next<ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             )}
@@ -472,7 +472,7 @@ export function LogsList() {
         )}
       </div>
 
-      {/* ═══════════ 详情弹窗（只读） ═══════════ */}
+      {/* Detail modal (read-only) */}
       {selectedLog && (() => {
         const name = displayName(selectedLog)
         return (
@@ -480,7 +480,7 @@ export function LogsList() {
             <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSelectedLog(null)} />
 
             <div className="modal-pop relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-              {/* 弹窗头 */}
+              {/* Modal header */}
               <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={clsx(
@@ -491,7 +491,7 @@ export function LogsList() {
                   </div>
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-semibold text-gray-900">
-                      {selectedLog.title || selectedLog.file_path.split('/').pop()?.replace('.md', '') || '无标题日志'}
+                      {selectedLog.title || selectedLog.file_path.split('/').pop()?.replace('.md', '') || 'Untitled'}
                     </h3>
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
                       <span className="font-medium text-gray-700">{name}</span>
@@ -512,7 +512,7 @@ export function LogsList() {
                     onClick={() => openEditor(selectedLog)}
                     className="inline-flex items-center gap-1 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
                   >
-                    <Pencil className="h-3.5 w-3.5" />编辑
+                    <Pencil className="h-3.5 w-3.5" />Edit
                   </button>
                   <button onClick={() => setSelectedLog(null)} className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
                     <X className="h-5 w-5" />

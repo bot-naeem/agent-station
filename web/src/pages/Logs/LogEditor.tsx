@@ -27,7 +27,7 @@ export function LogEditor() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  /* 加载日志 */
+  /* Load log */
   useEffect(() => {
     if (!logId) return
     setLoading(true)
@@ -38,11 +38,11 @@ export function LogEditor() {
         setTagsStr(((data.front_matter?.tags as string[]) || []).join(', '))
         setContent(data.content ?? '')
       })
-      .catch(e => setLoadError(e.response?.data?.detail || '加载失败'))
+      .catch(e => setLoadError(e.response?.data?.detail || 'Failed to load'))
       .finally(() => setLoading(false))
   }, [logId])
 
-  /* Ctrl/Cmd + S 保存 */
+  /* Ctrl/Cmd + S to save */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -72,16 +72,16 @@ export function LogEditor() {
       setTimeout(() => setSavedTick(false), 2000)
       queryClientInvalidate()
     } catch (e: any) {
-      setSaveError(e.response?.data?.detail || '保存失败，请重试')
+      setSaveError(e.response?.data?.detail || 'Failed to save, please try again')
     } finally {
       setSaving(false)
     }
   }
 
   const queryClientInvalidate = () => {
-    // 延迟引入避免循环依赖；直接用全局缓存命名空间刷新列表
+    // Avoid circular dependency; refresh list via global cache namespace
     try {
-      // tanstack query v5：通过事件让列表页重新拉取
+      // tanstack query v5: trigger list to refetch via event
       window.dispatchEvent(new CustomEvent('alp:invalidate-logs'))
     } catch { /* ignore */ }
   }
@@ -97,7 +97,7 @@ export function LogEditor() {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center gap-2 text-gray-400">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm">加载日志…</span>
+        <span className="text-sm">Loading log...</span>
       </div>
     )
   }
@@ -105,20 +105,20 @@ export function LogEditor() {
   if (loadError || !log) {
     return (
       <div className="flex h-[calc(100vh-10rem)] flex-col items-center justify-center gap-3">
-        <p className="text-sm text-red-600">{loadError || '日志不存在'}</p>
-        <button onClick={handleBack} className="btn-secondary">返回列表</button>
+        <p className="text-sm text-red-600">{loadError || 'Log not found'}</p>
+        <button onClick={handleBack} className="btn-secondary">Back to list</button>
       </div>
     )
   }
 
   return (
     <div className="mx-auto flex max-w-none flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
-      {/* ─── 顶栏 ─── */}
+      {/* Top bar */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             onClick={handleBack}
-            title="返回列表"
+            title="Back to list"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -126,7 +126,7 @@ export function LogEditor() {
           <input
             value={title}
             onChange={e => { setTitle(e.target.value); touch() }}
-            placeholder="日志标题"
+            placeholder="Log title"
             className="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1.5 text-lg font-bold text-gray-900 transition-colors placeholder-gray-300 hover:border-gray-200 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
@@ -137,7 +137,7 @@ export function LogEditor() {
             <input
               value={tagsStr}
               onChange={e => { setTagsStr(e.target.value); touch() }}
-              placeholder="标签，逗号分隔"
+              placeholder="Tags, comma-separated"
               className="w-44 rounded-lg border border-transparent bg-gray-50 px-2.5 py-1.5 text-xs text-gray-700 transition-colors placeholder-gray-400 hover:border-gray-200 focus:border-primary-500 focus:bg-white focus:outline-none"
             />
           </div>
@@ -146,11 +146,11 @@ export function LogEditor() {
             savedTick ? 'bg-emerald-50 text-emerald-600' : dirty ? 'bg-amber-50 text-amber-600' : 'text-gray-300',
           )}>
             {saving ? (
-              <><Loader2 className="h-3 w-3 animate-spin" />保存中…</>
+              <><Loader2 className="h-3 w-3 animate-spin" />Saving...</>
             ) : savedTick ? (
-              <><Check className="h-3 w-3" />已保存</>
+              <><Check className="h-3 w-3" />Saved</>
             ) : dirty ? (
-              <>未保存</>
+              <>Unsaved</>
             ) : (
               <Check className="h-3 w-3 opacity-40" />
             )}
@@ -161,12 +161,12 @@ export function LogEditor() {
             className="btn-primary inline-flex items-center gap-1.5 px-4 py-1.5 text-sm shadow-sm"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            保存
+            Save
           </button>
         </div>
       </div>
 
-      {/* 元信息条 */}
+      {/* Meta bar */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-gray-100 pb-2 text-xs text-gray-400">
         <span className="inline-flex items-center gap-1 font-medium text-gray-500">
           <FileText className="h-3 w-3" />
@@ -174,12 +174,12 @@ export function LogEditor() {
         </span>
         <span>{fmtDate(log.log_date)} {fmtTime(log.created_at)}</span>
         <span className="font-mono">{log.file_path}</span>
-        <span className="ml-auto tabular-nums">{words} 字符 · ≈{Math.ceil(words / 4)} tokens · ⌘S 保存</span>
+        <span className="ml-auto tabular-nums">{words} characters · ≈{Math.ceil(words / 4)} tokens · ⌘S to save</span>
       </div>
 
-      {/* 移动端 Tab 切换 */}
+      {/* Mobile tab switch */}
       <div className="mt-2 flex items-center gap-0.5 self-start rounded-lg bg-gray-100 p-0.5 lg:hidden">
-        {([['write', '编辑', PenLine], ['preview', '预览', Eye]] as const).map(([v, label, Icon]) => (
+        {([['write', 'Edit', PenLine], ['preview', 'Preview', Eye]] as const).map(([v, label, Icon]) => (
           <button
             key={v}
             onClick={() => setMobileTab(v)}
@@ -193,39 +193,39 @@ export function LogEditor() {
         ))}
       </div>
 
-      {/* ─── 分屏主体 ─── */}
+      {/* Split view */}
       <div className="mt-3 grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
-        {/* 左：源码编辑 */}
+        {/* Left: source */}
         <div className={clsx('min-h-0 min-w-0', mobileTab === 'write' ? 'block' : 'hidden lg:block')}>
           <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50/70 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wider text-gray-400">
             <PenLine className="h-3 w-3" />
-            Markdown 源码
+            Markdown Source
           </div>
           <textarea
             ref={textareaRef}
             value={content}
             onChange={e => { setContent(e.target.value); touch(); setMobileTab('write') }}
             spellCheck={false}
-            placeholder="# 用 Markdown 书写日志…"
+            placeholder="# Write log in Markdown..."
             className="h-[calc(100%-2rem)] w-full resize-none px-5 py-4 font-mono text-[13.5px] leading-relaxed text-gray-800 focus:outline-none scrollbar-thin"
           />
         </div>
 
-        {/* 右：实时预览 */}
+        {/* Right: live preview */}
         <div className={clsx('min-h-0 min-w-0 bg-white', mobileTab === 'preview' ? 'block' : 'hidden lg:block')}>
           <div className="flex items-center gap-1.5 border-b border-gray-100 bg-gray-50/70 px-4 py-1.5 text-[11px] font-medium uppercase tracking-wider text-gray-400">
             <Eye className="h-3 w-3" />
-            实时预览
+            Live Preview
           </div>
           <div className="h-[calc(100%-2rem)] overflow-auto px-6 py-4 scrollbar-thin">
             {content.trim()
               ? <MarkdownViewer content={content} />
-              : <p className="text-sm text-gray-300">左侧输入内容后这里会实时渲染</p>}
+              : <p className="text-sm text-gray-300">Content will be rendered here after you type on the left</p>}
           </div>
         </div>
       </div>
 
-      {/* 底部错误提示 */}
+      {/* Error footer */}
       {saveError && (
         <div className="pt-2 text-xs text-red-600">{saveError}</div>
       )}

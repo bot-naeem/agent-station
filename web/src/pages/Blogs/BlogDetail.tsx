@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { ArrowLeft, Edit, Tag, Calendar, User, Clock, Share2, ExternalLink, Loader2 } from 'lucide-react';
 import { api } from '@/services/api';
 import ReactMarkdown from 'react-markdown';
@@ -27,7 +26,7 @@ interface BlogPost {
 }
 
 function statusLabel(s: 'draft' | 'published' | 'archived' | string) {
-  const map: Record<string, string> = { published: '已发布', draft: '草稿', archived: '归档' };
+  const map: Record<string, string> = { published: 'Published', draft: 'Draft', archived: 'Archived' };
   return map[s] || s;
 }
 
@@ -53,11 +52,11 @@ export function BlogDetail() {
         setBlog(res.data);
       } catch (e: any) {
         if (e.response?.status === 404) {
-          setError('文章不存在');
+          setError('Post not found');
         } else if (e.response?.status === 403) {
-          setError('无权访问该文章');
+          setError('You do not have permission to view this post');
         } else {
-          setError('加载失败，请稍后重试');
+          setError('Failed to load, please try again later');
         }
       } finally {
         setLoading(false);
@@ -70,10 +69,10 @@ export function BlogDetail() {
     if (!blog) return;
     try {
       await navigator.clipboard.writeText(window.location.href);
-      alert('链接已复制');
+      alert('Link copied');
     } catch {
       // fallback
-      prompt('复制链接:', window.location.href);
+      prompt('Copy link:', window.location.href);
     }
   };
 
@@ -89,8 +88,8 @@ export function BlogDetail() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">{error || '文章不存在'}</h2>
-          <Link to="/blog" className="text-primary-600 hover:underline">返回博客列表</Link>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{error || 'Post not found'}</h2>
+          <Link to="/blog" className="text-primary-600 hover:underline">Back to Blog List</Link>
         </div>
       </div>
     );
@@ -109,7 +108,7 @@ export function BlogDetail() {
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm"
             >
               <ArrowLeft className="h-5 w-5" />
-              返回列表
+              Back to List
             </Link>
             <div className="flex items-center gap-2">
               {isOwner && (
@@ -118,10 +117,10 @@ export function BlogDetail() {
                   className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
                 >
                   <Edit className="h-4 w-4" />
-                  编辑
+                  Edit
                 </Link>
               )}
-              <button onClick={copyLink} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50" title="复制链接">
+              <button onClick={copyLink} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50" title="Copy link">
                 <Share2 className="h-5 w-5" />
               </button>
             </div>
@@ -149,18 +148,18 @@ export function BlogDetail() {
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
             <div className="flex items-center gap-1.5">
               <User className="h-4 w-4" />
-              <span>{blog.agent_name || '未知作者'}</span>
+              <span>{blog.agent_name || 'Unknown Author'}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
               <time dateTime={blog.published_at || blog.created_at}>
-                {blog.published_at ? format(new Date(blog.published_at), 'yyyy年MM月dd日', { locale: zhCN }) : format(new Date(blog.created_at), 'yyyy年MM月dd日', { locale: zhCN })}
+                {blog.published_at ? format(new Date(blog.published_at), 'yyyy-MM-dd') : format(new Date(blog.created_at), 'yyyy-MM-dd')}
               </time>
             </div>
             {blog.updated_at !== blog.created_at && (
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
-                <span>更新于 {format(new Date(blog.updated_at), 'yyyy-MM-dd', { locale: zhCN })}</span>
+                <span>Updated on {format(new Date(blog.updated_at), 'yyyy-MM-dd')}</span>
               </div>
             )}
           </div>
@@ -197,11 +196,11 @@ export function BlogDetail() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <ExternalLink className="h-4 w-4" />
-              <span>原文链接: {window.location.href}</span>
+              <span>Original Link: {window.location.href}</span>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/blog" className="text-sm text-primary-600 hover:underline">
-                ← 返回博客列表
+                ← Back to Blog List
               </Link>
             </div>
           </div>

@@ -56,9 +56,9 @@ async def _find_task(
         result = await db.execute(select(Task).where(Task.id == task_id))
         task = result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail=f"任务不存在: id={task_id}")
+            raise HTTPException(status_code=404, detail=f"Task not found: id={task_id}")
         if owner_id is not None and task.agent_id != owner_id:
-            raise HTTPException(status_code=403, detail=f"无权操作任务「{task.title}」")
+            raise HTTPException(status_code=403, detail=f"No permission to operate task '{task.title}'")
         return task
 
     if title:
@@ -68,10 +68,10 @@ async def _find_task(
         result = await db.execute(query)
         task = result.scalar_one_or_none()
         if not task:
-            raise HTTPException(status_code=404, detail=f"任务不存在: title={title}")
+            raise HTTPException(status_code=404, detail=f"Task not found: title={title}")
         return task
 
-    raise HTTPException(status_code=400, detail="必须提供 id 或 title 之一来定位任务")
+    raise HTTPException(status_code=400, detail="Must provide id or title to locate task")
 
 
 @router.post("/tasks", response_model=TaskResponse)
@@ -84,7 +84,7 @@ async def create_task(
     if not is_valid_status(payload.status):
         raise HTTPException(
             status_code=422,
-            detail=f"无效状态 '{payload.status}'，可选：{'/'.join(TASK_STATUSES)}",
+            detail=f"Invalid status '{payload.status}', available: {'/'.join(TASK_STATUSES)}",
         )
 
     is_admin = _is_admin(current)
@@ -95,7 +95,7 @@ async def create_task(
         result = await db.execute(select(Agent).where(Agent.id == payload.agent_id, Agent.is_active == True))
         target_agent = result.scalar_one_or_none()
         if not target_agent:
-            raise HTTPException(status_code=404, detail=f"目标 Agent 不存在或已禁用: {payload.agent_id}")
+            raise HTTPException(status_code=404, detail=f"Target Agent not found or disabled: {payload.agent_id}")
         agent_id = payload.agent_id
     else:
         agent_id = None if is_admin else current.id
@@ -108,7 +108,7 @@ async def create_task(
     if dup:
         raise HTTPException(
             status_code=409,
-            detail=f"已存在同名任务「{dup.title}」（{dup.status}），如需修改请用 update_task",
+            detail=f"Task with same title already exists '{dup.title}' ({dup.status}), use update_task to modify",
         )
 
     task = Task(
@@ -158,11 +158,11 @@ async def list_tasks(
                 states = [x.strip() for x in s.split(",") if x.strip()]
                 bad = [x for x in states if not is_valid_status(x)]
                 if bad:
-                    raise HTTPException(status_code=422, detail=f"无效状态: {'/'.join(bad)}，可选：{'/'.join(TASK_STATUSES)} 或 all")
+                    raise HTTPException(status_code=422, detail=f"Invalid status: {'/'.join(bad)}, available: {'/'.join(TASK_STATUSES)} or all")
                 q = q.where(Task.status.in_(states))
             else:
                 if not is_valid_status(s):
-                    raise HTTPException(status_code=422, detail=f"无效状态 '{s}'，可选：{'/'.join(TASK_STATUSES)} 或 all")
+                    raise HTTPException(status_code=422, detail=f"Invalid status '{s}', available: {'/'.join(TASK_STATUSES)} or all")
                 q = q.where(Task.status == s)
         else:
             q = q.where(Task.status.in_(ACTIVE_STATUSES))  # 缺省只回活跃态
@@ -175,7 +175,7 @@ async def list_tasks(
                 dt = datetime.fromisoformat(updated_since.replace("Z", "+00:00"))
                 q = q.where(Task.updated_at >= dt)
             except ValueError:
-                raise HTTPException(status_code=422, detail=f"updated_since 格式错误: '{updated_since}'，需要 ISO 时间")
+                raise HTTPException(status_code=422, detail=f"Invalid updated_since format: '{updated_since}', ISO datetime required")
         return q
 
     query = apply(query)
@@ -201,10 +201,10 @@ async def get_task(
     result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
-        raise HTTPException(status_code=404, detail=f"任务不存在: id={task_id}")
+        raise HTTPException(status_code=404, detail=f"Task not found: id={task_id}")
     visible_ids = await _scope_agent_ids(db, current, None)
     if visible_ids is not None and task.agent_id not in visible_ids:
-        raise HTTPException(status_code=403, detail=f"无权查看任务「{task.title}」")
+        raise HTTPException(status_code=403, detail=f"No permission to view task '{task.title}'")
     return task
 
 
@@ -219,10 +219,10 @@ async def update_task(
     result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
-        raise HTTPException(status_code=404, detail=f"任务不存在: id={task_id}")
+        raise HTTPException(status_code=404, detail=f"Task not found: id={task_id}")
 
     if not _is_admin(current) and task.agent_id != current.id:
-        raise HTTPException(status_code=403, detail=f"无权修改任务「{task.title}」，只能改自己的")
+        raise HTTPException(status_code=403, detail=f"No permission to update task '{task.title}', can only update own tasks")
 
     update_data = payload.model_dump(exclude_unset=True)
 
@@ -238,18 +238,18 @@ async def update_task(
                 dup_query = dup_query.where(Task.agent_id == task.agent_id)
             dup = (await db.execute(dup_query)).scalar_one_or_none()
             if dup:
-                raise HTTPException(status_code=409, detail=f"改名冲突：「{new_title}」已被任务占用（{dup.status}）")
+                raise HTTPException(status_code=409, detail=f"Rename conflict: '{new_title}' already taken ({dup.status})")
         task.title = new_title
 
     # status 变更写 history
     if "status" in update_data and update_data["status"]:
         new_status = update_data["status"]
         if not is_valid_status(new_status):
-            raise HTTPException(status_code=422, detail=f"无效状态 '{new_status}'，可选：{'/'.join(TASK_STATUSES)}")
+            raise HTTPException(status_code=422, detail=f"Invalid status '{new_status}', available: {'/'.join(TASK_STATUSES)}")
         if is_terminal_status(task.status) and new_status != task.status:
             raise HTTPException(
                 status_code=409,
-                detail=f"任务「{task.title}」已是终态「{task.status}」，不能改为「{new_status}」。请用 delete_task 删除或保持现状",
+                detail=f"Task '{task.title}' is already in terminal status '{task.status}', cannot change to '{new_status}'. Use delete_task to remove or keep as is",
             )
         old = task.status
         task.status = new_status
@@ -278,12 +278,12 @@ async def close_task(
     """归档语义收尾：置终态(完成/废弃) + 存结论。默认视图消失但 status=all 仍可查。JSON body 定位。"""
     status = payload.status or "完成"
     if status not in TERMINAL_STATUSES:
-        raise HTTPException(status_code=422, detail=f"close_task 只接受终态：{'/'.join(TERMINAL_STATUSES)}")
+        raise HTTPException(status_code=422, detail=f"close_task only accepts terminal statuses: {'/'.join(TERMINAL_STATUSES)}")
 
     task = await _find_task(db, task_id=payload.id, title=payload.title, owner_id=None if _is_admin(current) else current.id)
 
     if is_terminal_status(task.status):
-        raise HTTPException(status_code=409, detail=f"任务「{task.title}」已是终态「{task.status}」，无需重复归档")
+        raise HTTPException(status_code=409, detail=f"Task '{task.title}' is already in terminal status '{task.status}', no need to archive again")
 
     old = task.status
     task.status = status
@@ -304,13 +304,13 @@ async def delete_task(
 ):
     """硬删除（慎用）。日常收尾请走 POST /tasks/close。"""
     if not confirm:
-        raise HTTPException(status_code=400, detail="危险操作：删除请显式传 confirm=true。日常收尾建议用 close_task 归档")
+        raise HTTPException(status_code=400, detail="Dangerous operation: deletion requires confirm=true. Use close_task to archive for normal completion")
     result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
-        raise HTTPException(status_code=404, detail=f"任务不存在: id={task_id}")
+        raise HTTPException(status_code=404, detail=f"Task not found: id={task_id}")
     if not _is_admin(current) and task.agent_id != current.id:
-        raise HTTPException(status_code=403, detail=f"无权删除任务「{task.title}」")
+        raise HTTPException(status_code=403, detail=f"No permission to delete task '{task.title}'")
     await db.delete(task)
     await db.commit()
     return {"deleted": True, "id": str(task_id), "title": task.title}

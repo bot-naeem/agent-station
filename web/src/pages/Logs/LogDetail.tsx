@@ -2,6 +2,7 @@ import { useParams, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Calendar, Hash, Tag, Clock, Copy, Check } from 'lucide-react'
 import { format } from 'date-fns'
+import { enUS } from 'date-fns/locale'
 import { markdownApi } from '../../services/api'
 import { MarkdownViewer } from '../../components/MarkdownViewer'
 import { useState } from 'react'
@@ -13,7 +14,7 @@ export function LogDetail() {
   const { data: log, isLoading } = useQuery({
     queryKey: ['markdown-log-by-path', filePath],
     queryFn: async () => {
-      // 通过列表查找匹配的日志
+      // Find matching log via list
       const resp = await markdownApi.list({ 
         start_date: date, 
         end_date: date, 
@@ -47,11 +48,11 @@ export function LogDetail() {
     return (
       <div className="text-center py-12">
         <Hash className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900">日志不存在</h2>
-        <p className="text-gray-500 mt-2">找不到指定的日志文件</p>
+        <h2 className="text-xl font-semibold text-gray-900">Log not found</h2>
+        <p className="text-gray-500 mt-2">Log file not found</p>
         <Link to="/logs" className="btn-primary mt-4 inline-block">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          返回日志列表
+          Back to logs
         </Link>
       </div>
     )
@@ -59,13 +60,13 @@ export function LogDetail() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* 返回链接 */}
+      {/* Back link */}
       <Link to="/logs" className="inline-flex items-center text-gray-500 hover:text-gray-700 text-sm">
         <ArrowLeft className="h-4 w-4 mr-1" />
-        返回日志列表
+        Back to logs
       </Link>
 
-      {/* 头部信息 */}
+      {/* Header info */}
       <div className="card p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -78,7 +79,7 @@ export function LogDetail() {
             <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {format(new Date(log.log_date), 'yyyy年M月d日')}
+                {format(new Date(log.log_date), 'MMM d, yyyy', { locale: enUS })}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -100,25 +101,25 @@ export function LogDetail() {
               {copied ? (
                 <>
                   <Check className="h-4 w-4 mr-2 text-green-500" />
-                  已复制
+                  Copied
                 </>
               ) : (
                 <>
                   <Copy className="h-4 w-4 mr-2" />
-                  复制全文
+                  Copy all
                 </>
               )}
             </button>
             <Link to="/logs" className="btn-secondary">
-              列表视图
+              List view
             </Link>
           </div>
         </div>
 
-        {/* Front Matter 标签 */}
+        {/* Front Matter metadata */}
         {log.front_matter && Object.keys(log.front_matter).length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">元数据</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Metadata</h3>
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3 text-sm">
               {Object.entries(log.front_matter).map(([key, value]) => (
                 <div key={key} className="bg-gray-50 rounded-lg p-3">
@@ -141,10 +142,10 @@ export function LogDetail() {
         )}
       </div>
 
-      {/* Markdown 内容 */}
+      {/* Markdown content */}
       <div className="card">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900">正文内容</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Content</h2>
         </div>
         <div className="p-6">
           <MarkdownViewer content={log.content || ''} />

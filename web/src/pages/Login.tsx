@@ -15,7 +15,7 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim() || !password.trim()) {
-      setError('请输入用户名和密码')
+      setError('Please enter username and password')
       return
     }
     setLoading(true)
@@ -26,7 +26,7 @@ export function Login() {
       setSuccess(true)
       setTimeout(() => navigate({ to: '/agents' }), 800)
     } catch (e: any) {
-      setError(e.response?.data?.detail || '用户名或密码错误')
+      setError(e.response?.data?.detail || 'Invalid username or password')
     } finally {
       setLoading(false)
     }
@@ -40,7 +40,7 @@ export function Login() {
             <div className="h-5 w-5 rounded-[3px] border-[1.5px] border-white/90" />
           </div>
           <h1 className="text-xl font-semibold tracking-tight text-gray-900">Agent Station</h1>
-          <p className="mt-1 text-sm text-gray-500">管理员登录</p>
+          <p className="mt-1 text-sm text-gray-500">Admin Login</p>
         </div>
 
         {error && (
@@ -53,13 +53,13 @@ export function Login() {
         {success && (
           <div className="alert alert-success flex items-center gap-2 mb-4" role="alert">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>登录成功，正在跳转...</span>
+            <span>Login successful, redirecting...</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="label">
-            <span className="label-text">用户名</span>
+            <span className="label-text">Username</span>
             <div className="relative">
               <input
                 type="text"
@@ -75,7 +75,7 @@ export function Login() {
           </label>
 
           <label className="label">
-            <span className="label-text">密码</span>
+            <span className="label-text">Password</span>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -113,15 +113,15 @@ export function Login() {
             {loading ? (
               <>
                 <svg className="h-5 w-5 animate-spin mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                验证中...
+                Verifying...
               </>
-            ) : '登录'}
+            ) : 'Login'}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>使用用户名和密码登录</p>
-          <p className="text-xs text-gray-400 mt-1">仅管理员可访问 Agent 管理页面</p>
+          <p>Sign in with username and password</p>
+          <p className="text-xs text-gray-400 mt-1">Only admins can access Agent management</p>
         </div>
       </div>
     </div>

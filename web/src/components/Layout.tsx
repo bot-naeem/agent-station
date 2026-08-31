@@ -5,10 +5,10 @@ import { clsx } from 'clsx'
 import { authApi } from '../services/api'
 
 const navigation = [
-  { name: '仪表盘', href: '/', icon: LayoutDashboard },
-  { name: '动态', href: '/logs', icon: List },
-  { name: '博客', href: '/blog', icon: FileText },
-  { name: '任务', href: '/tasks', icon: KanbanSquare },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Feed', href: '/logs', icon: List },
+  { name: 'Blog', href: '/blog', icon: FileText },
+  { name: 'Tasks', href: '/tasks', icon: KanbanSquare },
   { name: 'Agents', href: '/agents', icon: Shield },
 ]
 
@@ -24,15 +24,15 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     e.preventDefault()
     setError('')
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setError('请填写所有字段')
+      setError('Please fill in all fields')
       return
     }
     if (newPassword.length < 6) {
-      setError('新密码至少 6 位')
+      setError('New password must be at least 6 characters')
       return
     }
     if (newPassword !== confirmPassword) {
-      setError('两次新密码不一致')
+      setError('New passwords do not match')
       return
     }
     setLoading(true)
@@ -41,7 +41,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setSuccess(true)
       setTimeout(() => onClose(), 1200)
     } catch (err: any) {
-      setError(err.response?.data?.detail || '修改失败，请重试')
+      setError(err.response?.data?.detail || 'Failed to update, please try again')
     } finally {
       setLoading(false)
     }
@@ -57,8 +57,8 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               <KeyRound className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">修改密码</h3>
-              <p className="text-xs text-gray-500">仅人类管理员</p>
+              <h3 className="text-sm font-semibold text-gray-900">Change Password</h3>
+              <p className="text-xs text-gray-500">Human admin only</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50">
@@ -67,23 +67,23 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-2">
           {error && <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
-          {success && <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">修改成功</div>}
+          {success && <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">Updated successfully</div>}
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">原密码</span>
-            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input" placeholder="当前密码" autoComplete="current-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">Current Password</span>
+            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input" placeholder="Current password" autoComplete="current-password" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">新密码</span>
-            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input" placeholder="至少 6 位" autoComplete="new-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">New Password</span>
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input" placeholder="At least 6 characters" autoComplete="new-password" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">确认新密码</span>
-            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input" placeholder="再次输入" autoComplete="new-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">Confirm New Password</span>
+            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input" placeholder="Re-enter password" autoComplete="new-password" />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary">取消</button>
+            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={loading} className="btn-primary min-w-[88px]">
-              {loading ? '提交中…' : '确认修改'}
+              {loading ? 'Submitting...' : 'Confirm'}
             </button>
           </div>
         </form>
@@ -162,7 +162,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 侧边栏 - 桌面端 */}
+      {/* Sidebar - Desktop */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-[220px] lg:flex-col">
         <div className="flex grow flex-col gap-y-6 border-r border-gray-100 bg-white px-4 pb-4">
           <div className="flex h-[60px] shrink-0 items-center px-2">
@@ -220,29 +220,29 @@ export function Layout() {
                         </div>
                         <div className="my-1 h-px bg-gray-100" />
                         <button onClick={() => { setSidebarMenuOpen(false); setShowPwdModal(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                          <KeyRound className="h-4 w-4 text-gray-400" /> 修改密码
+                          <KeyRound className="h-4 w-4 text-gray-400" /> Change Password
                         </button>
                         <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                          <LogOut className="h-4 w-4" /> 退出登录
+                          <LogOut className="h-4 w-4" /> Logout
                         </button>
                       </div>
                     )}
                   </div>
                 ) : (
                   <Link to="/login" className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-black">
-                    <LogIn className="h-4 w-4" /> 登录
+                    <LogIn className="h-4 w-4" /> Login
                   </Link>
                 )}
               </li>
             </ul>
           </nav>
           <div className="px-2 text-[11px] leading-relaxed text-gray-400">
-            自托管 · 极简
+            Self-hosted · Minimal
           </div>
         </div>
       </aside>
 
-      {/* 移动端菜单按钮 */}
+      {/* Mobile menu button */}
       <div className="lg:hidden fixed top-3 left-3 z-50">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -253,7 +253,7 @@ export function Layout() {
         </button>
       </div>
 
-      {/* 移动端侧边栏 */}
+      {/* Mobile sidebar */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
       )}
@@ -302,12 +302,12 @@ export function Layout() {
                       </div>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-1.5">
-                      <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">修改密码</button>
-                      <button onClick={() => { setMobileMenuOpen(false); handleLogout() }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">退出</button>
+                      <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">Change Password</button>
+                      <button onClick={() => { setMobileMenuOpen(false); handleLogout() }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">Logout</button>
                     </div>
                   </div>
                 ) : (
-                  <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex w-full justify-center rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">登录</Link>
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex w-full justify-center rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">Login</Link>
                 )}
               </div>
             </nav>
@@ -315,7 +315,7 @@ export function Layout() {
         </aside>
       )}
 
-      {/* 主内容区 */}
+      {/* Main content */}
       <div className="lg:pl-[220px]">
         <header className="sticky top-0 z-30 flex h-[60px] items-center gap-4 border-b border-gray-100 bg-white/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:px-6">
           <h1 className="flex-1 pl-10 text-sm font-medium tracking-tight text-gray-900 lg:pl-0">
@@ -342,17 +342,17 @@ export function Layout() {
                     </div>
                     <div className="my-1 h-px bg-gray-100" />
                     <button onClick={() => { setHeaderMenuOpen(false); setShowPwdModal(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <KeyRound className="h-4 w-4 text-gray-400" /> 修改密码
+                      <KeyRound className="h-4 w-4 text-gray-400" /> Change Password
                     </button>
                     <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                      <LogOut className="h-4 w-4" /> 退出登录
+                      <LogOut className="h-4 w-4" /> Logout
                     </button>
                   </div>
                 )}
               </div>
             ) : (
               <Link to="/login" className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
-                <LogIn className="h-4 w-4" /> 登录
+                <LogIn className="h-4 w-4" /> Login
               </Link>
             )}
           </div>

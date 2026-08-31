@@ -1,18 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
 import {
   Plus, Search, LayoutGrid, Table2, Loader2, Inbox,
   Archive, Pencil, Trash2, User, FolderKanban, X, AlertTriangle,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { tasksApi, agentApi, type Task } from '@/services/api'
-import { ALL_STATUSES, ACTIVE_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, isFinal, type TaskStatus } from './shared'
+import { ALL_STATUSES, ACTIVE_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, STATUS_LABEL, isFinal, type TaskStatus } from './shared'
 import { TaskFormModal } from './TaskFormModal'
 import { TaskDrawer } from './TaskDrawer'
 
-/* ─────────────── 任务卡片 ─────────────── */
+/* ─────────────── Task Card ─────────────── */
 
 function TaskCard({
   task, onOpen, onEdit, onDelete, onCloseTask, dragging, setDraggingId,
@@ -72,23 +71,23 @@ function TaskCard({
           <span className="truncate">{task.agent_name || task.agent_id.slice(0, 8)}</span>
         </div>
         <span className="shrink-0 text-[11px] text-gray-400">
-          {format(new Date(task.updated_at), 'MM-dd', { locale: zhCN })}
+          {format(new Date(task.updated_at), 'MM-dd')}
         </span>
       </div>
 
-      {/* hover 快捷操作 */}
+      {/* hover quick actions */}
       <div className="absolute right-1.5 top-1.5 hidden gap-0.5 rounded-lg bg-white/95 p-0.5 shadow-md ring-1 ring-gray-200 group-hover:flex">
         {!final ? (
           <>
             <button
-              title="归档"
+              title="Archive"
               onClick={e => { e.stopPropagation(); onCloseTask(task) }}
               className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
             >
               <Archive className="h-3.5 w-3.5" />
             </button>
             <button
-              title="编辑"
+              title="Edit"
               onClick={e => { e.stopPropagation(); onEdit(task) }}
               className="rounded p-1 text-gray-500 hover:bg-gray-100"
             >
@@ -97,7 +96,7 @@ function TaskCard({
           </>
         ) : null}
         <button
-          title="删除"
+          title="Delete"
           onClick={e => { e.stopPropagation(); onDelete(task) }}
           className="rounded p-1 text-red-500 hover:bg-red-50"
         >
@@ -108,7 +107,7 @@ function TaskCard({
   )
 }
 
-/* ─────────────── 看板列 ─────────────── */
+/* ─────────────── Kanban Column ─────────────── */
 
 function KanbanColumn({
   status, tasks, isDropTarget, onDropColumn, cardProps,
@@ -130,7 +129,7 @@ function KanbanColumn({
   const final = isFinal(status)
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (final) return // 终态列不接收直接拖入（走归档弹窗流程）
+    if (final) return // Final columns don't accept direct drop (requires archive modal)
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
@@ -144,17 +143,17 @@ function KanbanColumn({
         isDropTarget && !final && 'bg-primary-50 ring-2 ring-primary-300',
       )}
     >
-      {/* 列头 */}
+      {/* Column header */}
       <div className="flex items-center gap-2 px-3 pt-3 pb-2">
         <span className={clsx('h-2 w-2 rounded-full', STATUS_BAR[status])} />
         <Icon className="h-3.5 w-3.5 text-gray-400" />
-        <span className="text-sm font-semibold text-gray-700">{status}</span>
+        <span className="text-sm font-semibold text-gray-700">{STATUS_LABEL[status]}</span>
         <span className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
           {tasks.length}
         </span>
       </div>
 
-      {/* 卡片 */}
+      {/* Cards */}
       <div className="scrollbar-thin flex max-h-[calc(100vh-22rem)] min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto px-2 pb-3">
         {tasks.map(t => (
           <TaskCard key={t.id} task={t} dragging={cardProps.draggingId === t.id}
@@ -165,7 +164,7 @@ function KanbanColumn({
         ))}
         {tasks.length === 0 && (
           <div className="flex flex-1 items-center justify-center py-6">
-            <span className="text-xs text-gray-300">{final ? '暂无归档' : '拖拽卡片到此'}</span>
+            <span className="text-xs text-gray-300">{final ? 'No archived tasks' : 'Drag card here'}</span>
           </div>
         )}
       </div>
@@ -173,7 +172,7 @@ function KanbanColumn({
   )
 }
 
-/* ─────────────── 归档弹窗 ─────────────── */
+/* ─────────────── Archive Modal ─────────────── */
 
 function CloseTaskModal({ task, status, onClose }: {
   task: Task | null
@@ -187,7 +186,7 @@ function CloseTaskModal({ task, status, onClose }: {
   const mutation = useMutation({
     mutationFn: () => tasksApi.close(task!.id, { status: status as '完成' | '废弃', result: result.trim() || undefined }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); onClose() },
-    onError: (e: any) => setError(e.response?.data?.detail || '归档失败，请重试'),
+    onError: (e: any) => setError(e.response?.data?.detail || 'Failed to archive, please try again'),
   })
 
   if (!task || !status) return null
@@ -200,21 +199,21 @@ function CloseTaskModal({ task, status, onClose }: {
           <div className="border-b border-gray-100 px-5 py-4">
             <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
               <Archive className="h-4.5 w-4.5 text-emerald-600" />
-              归档任务 → {status}
+              Archive Task → {STATUS_LABEL[status]}
             </h2>
           </div>
           <div className="space-y-3 px-5 py-4">
             <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
               <span className="font-medium text-gray-800">{task.title}</span>
               <br />
-              归档后任务进入终态，不可再修改状态。
+              After archiving, the task enters its final state and its status can no longer be changed.
             </p>
             <textarea
               value={result}
               onChange={e => setResult(e.target.value)}
               rows={4}
               autoFocus
-              placeholder="填写归档结论 / 完成报告（Markdown，可选）…"
+              placeholder="Enter archive conclusion / completion report (Markdown, optional)..."
               className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
             {error && (
@@ -224,14 +223,14 @@ function CloseTaskModal({ task, status, onClose }: {
             )}
           </div>
           <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3.5">
-            <button onClick={onClose} className="btn-secondary px-4 py-1.5 text-sm">取消</button>
+            <button onClick={onClose} className="btn-secondary px-4 py-1.5 text-sm">Cancel</button>
             <button
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
               className="btn-primary inline-flex items-center gap-1.5 px-4 py-1.5 text-sm"
             >
               {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              确认归档
+              Confirm Archive
             </button>
           </div>
         </div>
@@ -240,14 +239,14 @@ function CloseTaskModal({ task, status, onClose }: {
   )
 }
 
-/* ─────────────── 删除确认弹窗 ─────────────── */
+/* ─────────────── Delete Confirm Modal ─────────────── */
 
 function DeleteTaskModal({ task, onClose }: { task: Task | null; onClose: () => void }) {
   const qc = useQueryClient()
   const mutation = useMutation({
     mutationFn: () => tasksApi.delete(task!.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); onClose() },
-    onError: () => alert('删除失败，请重试'),
+    onError: () => alert('Failed to delete, please try again'),
   })
 
   if (!task) return null
@@ -261,20 +260,20 @@ function DeleteTaskModal({ task, onClose }: { task: Task | null; onClose: () => 
             <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-red-50">
               <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900">确认删除此任务？</h2>
+            <h2 className="text-base font-semibold text-gray-900">Delete this task?</h2>
             <p className="break-all text-sm text-gray-500">
-              「{task.title}」将被永久删除，此操作不可恢复。
+              "{task.title}" will be permanently deleted and cannot be recovered.
             </p>
           </div>
           <div className="flex justify-center gap-2 border-t border-gray-100 px-5 py-3.5">
-            <button onClick={onClose} className="btn-secondary px-5 py-1.5 text-sm">取消</button>
+            <button onClick={onClose} className="btn-secondary px-5 py-1.5 text-sm">Cancel</button>
             <button
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
               className="btn-danger inline-flex items-center gap-1.5 px-5 py-1.5 text-sm"
             >
               {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              永久删除
+              Delete Permanently
             </button>
           </div>
         </div>
@@ -283,14 +282,14 @@ function DeleteTaskModal({ task, onClose }: { task: Task | null; onClose: () => 
   )
 }
 
-/* ─────────────── 主页面 ─────────────── */
+/* ─────────────── Main Page ─────────────── */
 
 interface AgentOption { id: string; display_name: string }
 
 export function TaskCenter() {
   const qc = useQueryClient()
 
-  // 数据
+  // Data
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', 'board'],
     queryFn: () => tasksApi.list({ page_size: 200 }),
@@ -305,7 +304,7 @@ export function TaskCenter() {
   const allTasks = useMemo(() => data?.items ?? [], [data])
   const agents: AgentOption[] = (agentsData?.items ?? []).filter(a => a.is_active)
 
-  // 筛选
+  // Filters
   const [keyword, setKeyword] = useState('')
   const [agentFilter, setAgentFilter] = useState('')
   const [projectFilter, setProjectFilter] = useState('')
@@ -341,14 +340,14 @@ export function TaskCenter() {
     ALL_STATUSES.map(s => ({ status: s, items: filtered.filter(t => t.status === s) })),
   [filtered])
 
-  // 弹窗 / 抽屉状态
+  // Modal / drawer state
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
   const [drawerTask, setDrawerTask] = useState<Task | null>(null)
   const [closing, setClosing] = useState<{ task: Task; status: TaskStatus } | null>(null)
   const [deleting, setDeleting] = useState<Task | null>(null)
 
-  // 拖拽
+  // Drag
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null)
 
@@ -357,7 +356,7 @@ export function TaskCenter() {
     setDropTarget(null)
   }
 
-  // 状态变更 mutation（乐观更新）
+  // Status change mutation (optimistic update)
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       tasksApi.update(id, { status }),
@@ -377,7 +376,7 @@ export function TaskCenter() {
     const task = allTasks.find(t => t.id === draggingId)
     setDraggingId(null)
     if (!task || task.status === target) return
-    if (isFinal(target)) return openArchive(task, target) // 拖入终态 → 走归档弹窗
+    if (isFinal(target)) return openArchive(task, target) // Drag to final → open archive modal
     updateStatus.mutate({ id: task.id, status: target })
   }
 
@@ -385,7 +384,7 @@ export function TaskCenter() {
 
   return (
     <div className="-m-4 lg:-m-8">
-      {/* ─── 页头 ─── */}
+      {/* ─── Header ─── */}
       <div className="sticky top-16 z-20 border-b border-gray-200 bg-gray-50/95 px-4 pb-3 pt-5 backdrop-blur lg:px-8">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative mr-auto">
@@ -393,7 +392,7 @@ export function TaskCenter() {
             <input
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
-              placeholder="搜索标题、详情、标签、结论…"
+              placeholder="Search title, details, tags, result..."
               className="w-56 rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-8 text-sm shadow-sm placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
             />
             {keyword && (
@@ -408,7 +407,7 @@ export function TaskCenter() {
             onChange={e => setAgentFilter(e.target.value)}
             className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 shadow-sm focus:border-primary-400 focus:outline-none"
           >
-            <option value="">全部 Agent</option>
+            <option value="">All Agents</option>
             {agents.map(a => <option key={a.id} value={a.id}>{a.display_name}</option>)}
           </select>
 
@@ -417,13 +416,13 @@ export function TaskCenter() {
             onChange={e => setProjectFilter(e.target.value)}
             className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 shadow-sm focus:border-primary-400 focus:outline-none"
           >
-            <option value="">全部项目</option>
+            <option value="">All Projects</option>
             {projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
 
-          {/* 视图切换 */}
+          {/* View toggle */}
           <div className="ml-auto flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
-            {([['kanban', LayoutGrid, '看板'], ['table', Table2, '表格']] as const).map(([v, Icon, label]) => (
+            {([['kanban', LayoutGrid, 'Board'], ['table', Table2, 'Table']] as const).map(([v, Icon, label]) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -441,21 +440,22 @@ export function TaskCenter() {
             onClick={() => { setEditing(null); setFormOpen(true) }}
             className="btn-primary inline-flex items-center gap-1.5 !py-1.5 text-sm shadow-sm"
           >
-            <Plus className="h-4 w-4" />新建分派
+            <Plus className="h-4 w-4" />New Task
           </button>
         </div>
 
-        {/* ─── 统计条 ─── */}
+        {/* ─── Stats Bar ─── */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {(['全部', ...ALL_STATUSES] as const).map(s => {
             const active = statusPill === s
+            const label = s === '全部' ? 'All' : STATUS_LABEL[s as TaskStatus]
             return (
               <button
                 key={s}
                 onClick={() => {
                   if (s === '全部') { setStatusPill('全部'); return }
                   setView('table')
-                  setStatusPill(active ? '全部' : s)
+                  setStatusPill(active ? '全部' : s as TaskStatus)
                 }}
                 className={clsx(
                   'inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all',
@@ -469,8 +469,8 @@ export function TaskCenter() {
                       : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-primary-300',
                 )}
               >
-                {s !== '全部' && <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_BAR[s])} />}
-                {s}
+                {s !== '全部' && <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_BAR[s as TaskStatus])} />}
+                {label}
                 <span className={clsx('tabular-nums', active || s === '全部' ? 'opacity-80' : 'text-gray-400')}>
                   {counts[s]}
                 </span>
@@ -482,37 +482,37 @@ export function TaskCenter() {
               onClick={() => setStatusPill('全部')}
               className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-1 text-xs text-gray-400 hover:text-gray-700"
             >
-              <X className="h-3 w-3" />清除
+              <X className="h-3 w-3" />Clear
             </button>
           )}
         </div>
       </div>
 
-      {/* ─── 内容区 ─── */}
+      {/* ─── Content ─── */}
       {isLoading ? (
         <div className="flex h-64 items-center justify-center gap-2 text-gray-400">
           <Loader2 className="h-5 w-5 animate-spin" />
-          <span className="text-sm">加载任务中…</span>
+          <span className="text-sm">Loading tasks...</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex h-72 flex-col items-center justify-center gap-3">
           <Inbox className="h-12 w-12 text-gray-200" />
           <div className="text-center">
             <p className="font-medium text-gray-700">
-              {hasActiveFilter || (view === 'table' && statusPill !== '全部') ? '没有符合条件的任务' : '还没有任何任务'}
+              {hasActiveFilter || (view === 'table' && statusPill !== '全部') ? 'No matching tasks' : 'No tasks yet'}
             </p>
             <p className="mt-1 text-sm text-gray-400">
-              {hasActiveFilter ? '调整筛选条件试试' : '点击右上角「新建分派」创建第一个任务'}
+              {hasActiveFilter ? 'Try adjusting filters' : 'Click "New Task" at the top right to create the first task'}
             </p>
           </div>
           {hasActiveFilter && (
             <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter(''); setStatusPill('全部') }} className="btn-secondary px-4 py-1.5 text-sm">
-              清除筛选
+              Clear Filters
             </button>
           )}
         </div>
       ) : view === 'kanban' ? (
-        /* 看板视图 */
+        /* Kanban view */
         <div className="scrollbar-thin overflow-x-auto px-4 py-4 lg:px-8">
           <div
             className="flex gap-3"
@@ -545,19 +545,19 @@ export function TaskCenter() {
           </div>
         </div>
       ) : (
-        /* 表格视图 */
+        /* Table view */
         <div className="px-4 py-4 lg:px-8">
           <div className="card">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-3">状态</th>
-                    <th className="px-4 py-3">标题</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Title</th>
                     <th className="px-4 py-3">Agent</th>
-                    <th className="px-4 py-3">项目 / 标签</th>
-                    <th className="px-4 py-3">更新时间</th>
-                    <th className="px-4 py-3 text-right">操作</th>
+                    <th className="px-4 py-3">Project / Tags</th>
+                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -571,7 +571,7 @@ export function TaskCenter() {
                             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1',
                             STATUS_COLOR[task.status],
                           )}>
-                            <Icon className="h-3 w-3" />{task.status}
+                            <Icon className="h-3 w-3" />{STATUS_LABEL[task.status]}
                           </span>
                         </td>
                         <td className="max-w-xs px-4 py-2.5">
@@ -593,7 +593,7 @@ export function TaskCenter() {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-2.5 text-gray-500">
-                          {format(new Date(task.updated_at), 'MM-dd HH:mm', { locale: zhCN })}
+                          {format(new Date(task.updated_at), 'MM-dd HH:mm')}
                         </td>
                         <td className="px-4 py-2.5">
                           <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
@@ -609,19 +609,19 @@ export function TaskCenter() {
                                   }}
                                   className="cursor-pointer rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600 hover:border-gray-300"
                                 >
-                                  <option value="">流转 ▸</option>
+                                  <option value="">Move to ▸</option>
                                   {ACTIVE_STATUSES.filter(s => s !== task.status).map(s => (
-                                    <option key={s} value={s}>{s}</option>
+                                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                                   ))}
-                                  <option value="完成">归档为完成</option>
-                                  <option value="废弃">归档为废弃</option>
+                                  <option value="完成">Archive as Done</option>
+                                  <option value="废弃">Archive as Abandoned</option>
                                 </select>
-                                <button title="编辑" onClick={() => { setEditing(task); setFormOpen(true) }} className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
+                                <button title="Edit" onClick={() => { setEditing(task); setFormOpen(true) }} className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
                                   <Pencil className="h-3.5 w-3.5" />
                                 </button>
                               </>
                             )}
-                            <button title="删除" onClick={() => setDeleting(task)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
+                            <button title="Delete" onClick={() => setDeleting(task)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
@@ -633,13 +633,13 @@ export function TaskCenter() {
               </table>
             </div>
             <div className="border-t border-gray-100 px-4 py-2.5 text-xs text-gray-400">
-              共 {filtered.length} 个任务
+              {filtered.length} tasks total
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── 弹层 ─── */}
+      {/* ─── Modals ─── */}
       <TaskFormModal
         open={formOpen}
         task={editing}

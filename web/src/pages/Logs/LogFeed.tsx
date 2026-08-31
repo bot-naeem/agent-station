@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { Loader2, Clock, CalendarDays, Inbox, Tag as TagIcon, Pencil, Check, Search } from 'lucide-react'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { markdownApi, type MarkdownLog } from '../../services/api'
 import { clsx } from 'clsx'
 import { useNavigate } from '@tanstack/react-router'
@@ -37,18 +37,18 @@ function initials(name: string) {
 function fmtDate(d: string) {
   try {
     const date = new Date(d)
-    if (isToday(date)) return '今天'
-    if (isYesterday(date)) return '昨天'
-    return format(date, 'MM月dd日', { locale: zhCN })
+    if (isToday(date)) return 'Today'
+    if (isYesterday(date)) return 'Yesterday'
+    return format(date, 'MMM dd', { locale: enUS })
   } catch { return d }
 }
 
 function fmtFullDate(d: string) {
-  try { return format(new Date(d), 'yyyy年MM月dd日', { locale: zhCN }) } catch { return d }
+  try { return format(new Date(d), 'MMM dd, yyyy', { locale: enUS }) } catch { return d }
 }
 
 function timeAgo(iso: string) {
-  try { return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: zhCN }) } catch { return '' }
+  try { return formatDistanceToNow(new Date(iso), { addSuffix: true, locale: enUS }) } catch { return '' }
 }
 
 function displayName(log: MarkdownLog) {
@@ -72,7 +72,7 @@ function groupByDate(items: MarkdownLog[]) {
 function LogCard({ log, onEdit }: { log: MarkdownLog; onEdit: (l: MarkdownLog) => void }) {
   const name = displayName(log)
   const tags = (log.front_matter?.tags as string[] | undefined) ?? []
-  const title = log.title || log.file_path.split('/').pop()?.replace('.md', '') || '无标题'
+  const title = log.title || log.file_path.split('/').pop()?.replace('.md', '') || 'Untitled'
   const summary = log.summary?.trim() ?? ''
 
   return (
@@ -95,7 +95,7 @@ function LogCard({ log, onEdit }: { log: MarkdownLog; onEdit: (l: MarkdownLog) =
             onClick={(e) => { e.stopPropagation(); onEdit(log) }}
             className="ml-auto hidden items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-900 hover:text-white group-hover:inline-flex md:inline-flex md:opacity-0 md:group-hover:opacity-100 transition"
           >
-            <Pencil className="h-3 w-3" /> 编辑
+            <Pencil className="h-3 w-3" /> Edit
           </button>
         </div>
 
@@ -202,13 +202,13 @@ export function LogFeed() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索标题、摘要…"
+              placeholder="Search title, summary..."
               className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-gray-900 focus:bg-white focus:outline-none"
             />
           </div>
           <div className="hidden items-center gap-1.5 sm:flex">
             {[
-              { label: '全部', value: undefined },
+              { label: 'All', value: undefined },
               ...['docker', 'deploy', 'fix', 'feat', 'refactor'].map((t) => ({ label: `#${t}`, value: t })),
             ].map((opt) => (
               <button
@@ -226,7 +226,7 @@ export function LogFeed() {
         </div>
         <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 sm:hidden">
           {[
-            { label: '全部', value: undefined },
+            { label: 'All', value: undefined },
             ...['docker', 'deploy', 'fix', 'feat', 'refactor'].map((t) => ({ label: `#${t}`, value: t })),
           ].map((opt) => (
             <button
@@ -260,8 +260,8 @@ export function LogFeed() {
           </div>
         ) : isError ? (
           <div className="p-10 text-center">
-            <p className="text-sm text-red-600">加载失败，请重试</p>
-            <button onClick={() => refetch()} className="mt-3 rounded-full bg-gray-900 px-4 py-2 text-sm text-white">重试</button>
+            <p className="text-sm text-red-600">Failed to load, please try again</p>
+            <button onClick={() => refetch()} className="mt-3 rounded-full bg-gray-900 px-4 py-2 text-sm text-white">Retry</button>
           </div>
         ) : isEmpty ? (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -269,8 +269,8 @@ export function LogFeed() {
               <Inbox className="h-7 w-7" />
             </div>
             <div>
-              <p className="font-medium text-gray-900">还没有动态</p>
-              <p className="mt-1 text-sm text-gray-500">Agent 通过 MCP 写入后会实时出现在这里</p>
+              <p className="font-medium text-gray-900">No activity yet</p>
+              <p className="mt-1 text-sm text-gray-500">Logs written by Agents via MCP will appear here in real time</p>
             </div>
           </div>
         ) : (
@@ -290,19 +290,19 @@ export function LogFeed() {
             <div ref={sentinelRef} className="h-px" />
             {isFetchingNextPage && (
               <div className="flex items-center justify-center gap-2 border-t border-gray-100 py-6 text-sm text-gray-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> 加载更多…
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading more...
               </div>
             )}
             {!hasNextPage && (
               <div className="flex items-center justify-center gap-1.5 border-t border-gray-100 bg-gray-50/50 py-6 text-xs text-gray-400">
-                <Check className="h-3.5 w-3.5" /> 已加载全部 {total} 条 · 到底啦
+                <Check className="h-3.5 w-3.5" /> All {total} items loaded · End
               </div>
             )}
           </div>
         )}
       </div>
 
-      <p className="mt-6 text-center text-xs text-gray-400">下拉自动加载更多 · 支持全文搜索与标签筛选</p>
+      <p className="mt-6 text-center text-xs text-gray-400">Scroll to load more · Full-text search and tag filtering supported</p>
     </div>
   )
 }
