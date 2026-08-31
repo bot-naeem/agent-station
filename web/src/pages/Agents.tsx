@@ -19,10 +19,10 @@ const DOCS_URL = `${APP_ORIGIN}/api/v1/docs/mcp`
 const SKILL_TEMPLATE_URL = `${APP_ORIGIN}/api/v1/docs/skill-template`
 
 const PERMISSION_META: Record<string, { label: string; desc: string; chip: string }> = {
-  read_own:      { label: '读取自己', desc: '仅可查看自己写入的日志',           chip: 'bg-gray-100 text-gray-700 ring-gray-200' },
-  read_all:      { label: '读取全部', desc: '可查看所有 Agent 的日志',          chip: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  read_specific: { label: '指定读取', desc: '仅可查看下方指定 Agent 的日志',    chip: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
-  write_own:     { label: '写入自己', desc: '可写入自己的日志',                 chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  read_own:      { label: '读取自己', desc: '仅可查看自己写入的日志',           chip: 'bg-gray-50 text-gray-600 ring-gray-200' },
+  read_all:      { label: '读取全部', desc: '可查看所有 Agent 的日志',          chip: 'bg-gray-50 text-gray-600 ring-gray-200' },
+  read_specific: { label: '指定读取', desc: '仅可查看下方指定 Agent 的日志',    chip: 'bg-gray-50 text-gray-600 ring-gray-200' },
+  write_own:     { label: '写入自己', desc: '可写入自己的日志',                 chip: 'bg-gray-50 text-gray-600 ring-gray-200' },
 }
 
 const PERMISSION_ORDER = ['read_own', 'read_all', 'read_specific', 'write_own']
@@ -615,9 +615,9 @@ export function Agents() {
   }, [agents, search, statusFilter])
 
   const stats = useMemo(() => [
-    { label: 'Agent 总数', value: agents.length, icon: Bot, tone: 'bg-sky-50 text-sky-600' },
-    { label: '启用中', value: agents.filter(a => a.is_active).length, icon: Activity, tone: 'bg-emerald-50 text-emerald-600' },
-    { label: '近 7 天活跃', value: agents.filter(a => a.last_used_at && Date.now() - new Date(a.last_used_at).getTime() < 7 * 86400_000).length, icon: Clock, tone: 'bg-amber-50 text-amber-600' },
+    { label: 'Agent 总数', value: agents.length, icon: Bot, tone: 'bg-gray-50 text-gray-600' },
+    { label: '启用中', value: agents.filter(a => a.is_active).length, icon: Activity, tone: 'bg-gray-50 text-gray-600' },
+    { label: '近 7 天活跃', value: agents.filter(a => a.last_used_at && Date.now() - new Date(a.last_used_at).getTime() < 7 * 86400_000).length, icon: Clock, tone: 'bg-gray-50 text-gray-600' },
   ], [agents])
 
   /* ------------------------------ 渲染 ------------------------------ */

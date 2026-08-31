@@ -33,17 +33,14 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-8">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-100 p-8">
         <div className="text-center mb-8">
-          <div className="mx-auto h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="h-10 w-10 text-primary-600" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="6" fill="currentColor"/>
-              <path d="M8 12h16M8 16h12M8 20h8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            </svg>
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 text-white mb-4">
+            <div className="h-5 w-5 rounded-[3px] border-[1.5px] border-white/90" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Agent Station</h1>
-          <p className="text-gray-500 mt-1">管理员登录</p>
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900">Agent Station</h1>
+          <p className="mt-1 text-sm text-gray-500">管理员登录</p>
         </div>
 
         {error && (

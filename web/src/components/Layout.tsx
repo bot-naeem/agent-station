@@ -6,10 +6,10 @@ import { authApi } from '../services/api'
 
 const navigation = [
   { name: '仪表盘', href: '/', icon: LayoutDashboard },
-  { name: '日志列表', href: '/logs', icon: List },
+  { name: '动态', href: '/logs', icon: List },
   { name: '博客', href: '/blog', icon: FileText },
-  { name: '任务中心', href: '/tasks', icon: KanbanSquare },
-  { name: 'Agent 管理', href: '/agents', icon: Shield },
+  { name: '任务', href: '/tasks', icon: KanbanSquare },
+  { name: 'Agents', href: '/agents', icon: Shield },
 ]
 
 function ChangePasswordModal({ onClose }: { onClose: () => void }) {
@@ -49,38 +49,38 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+      <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl bg-white border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-              <KeyRound className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
+              <KeyRound className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">修改密码</h3>
-              <p className="text-xs text-gray-500">仅人类管理员可修改</p>
+              <h3 className="text-sm font-semibold text-gray-900">修改密码</h3>
+              <p className="text-xs text-gray-500">仅人类管理员</p>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-            <X className="h-5 w-5" />
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50">
+            <X className="h-4 w-4" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4 p-6">
-          {error && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-          {success && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">修改成功</div>}
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 pt-2">
+          {error && <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
+          {success && <div className="rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">修改成功</div>}
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-gray-700">原密码</span>
-            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input w-full" placeholder="当前密码" autoComplete="current-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">原密码</span>
+            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} className="input" placeholder="当前密码" autoComplete="current-password" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-gray-700">新密码</span>
-            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input w-full" placeholder="至少 6 位" autoComplete="new-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">新密码</span>
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="input" placeholder="至少 6 位" autoComplete="new-password" />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-gray-700">确认新密码</span>
-            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input w-full" placeholder="再次输入新密码" autoComplete="new-password" />
+            <span className="mb-1.5 block text-xs font-medium tracking-wide text-gray-600">确认新密码</span>
+            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input" placeholder="再次输入" autoComplete="new-password" />
           </label>
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">取消</button>
             <button type="submit" disabled={loading} className="btn-primary min-w-[88px]">
               {loading ? '提交中…' : '确认修改'}
@@ -129,72 +129,72 @@ export function Layout() {
 
   if (isLogin) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <Outlet />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* 侧边栏 - 桌面端 */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <Link to="/" className="flex items-center gap-2">
-              <svg className="h-8 w-8 text-primary-600" viewBox="0 0 32 32" fill="none">
-                <rect width="32" height="32" rx="6" fill="currentColor"/>
-                <path d="M8 12h16M8 16h12M8 20h8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-              </svg>
-              <span className="text-xl font-bold text-gray-900">Agent Station</span>
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-[220px] lg:flex-col">
+        <div className="flex grow flex-col gap-y-6 border-r border-gray-100 bg-white px-4 pb-4">
+          <div className="flex h-[60px] shrink-0 items-center px-2">
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-900 text-white">
+                <div className="h-3 w-3 rounded-sm border-[1.5px] border-white/90" />
+              </div>
+              <span className="text-[15px] font-semibold tracking-tight text-gray-900">Agent Station</span>
             </Link>
           </div>
           <nav className="flex flex-1 flex-col">
-            <ul role="list" className="flex flex-1 flex-col gap-y-7">
+            <ul role="list" className="flex flex-1 flex-col gap-y-6">
               <li>
-                <ul role="list" className="-mx-2 space-y-1">
-                  {navigation.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        to={item.href}
-                        className={clsx(
-                          'group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-semibold',
-                          location.pathname === item.href || location.pathname.startsWith(item.href + '/')
-                            ? 'bg-primary-50 text-primary-700'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                        )}
-                      >
-                        <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
+                <ul role="list" className="space-y-1">
+                  {navigation.map((item) => {
+                    const active = location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          to={item.href}
+                          className={clsx(
+                            'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors',
+                            active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          )}
+                        >
+                          <item.icon className={clsx('h-[18px] w-[18px] shrink-0', active ? 'text-white' : 'text-gray-400')} />
+                          {item.name}
+                        </Link>
+                      </li>
+                    )
+                  })}
                 </ul>
               </li>
               <li className="mt-auto">
-                <div className="rounded-xl bg-gray-50 p-3">
+                <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-3">
                   {authChecked && user ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
                           {user.display_name.slice(0, 1).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate font-medium text-gray-900">{user.display_name}</div>
+                          <div className="truncate text-sm font-medium leading-none text-gray-900">{user.display_name}</div>
                           <div className="truncate text-xs text-gray-500">@{user.username}</div>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => setShowPwdModal(true)} className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-900 hover:text-white">
-                          <KeyRound className="h-3.5 w-3.5" /> 改密码
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button onClick={() => setShowPwdModal(true)} className="inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-white hover:ring-gray-300">
+                          <KeyRound className="h-3 w-3" /> 密码
                         </button>
-                        <button onClick={handleLogout} className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200">
-                          <LogOut className="h-3.5 w-3.5" /> 退出
+                        <button onClick={handleLogout} className="inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50">
+                          <LogOut className="h-3 w-3" /> 退出
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <Link to="/login" className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    <Link to="/login" className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-black">
                       <LogIn className="h-4 w-4" /> 登录
                     </Link>
                   )}
@@ -202,98 +202,89 @@ export function Layout() {
               </li>
             </ul>
           </nav>
+          <div className="px-2 text-[11px] leading-relaxed text-gray-400">
+            自托管 · 极简
+          </div>
         </div>
       </aside>
 
       {/* 移动端菜单按钮 */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-3 left-3 z-50">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="btn-primary p-2 rounded-lg shadow-lg"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-700"
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
       </div>
 
       {/* 移动端侧边栏 */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
       )}
       {mobileMenuOpen && (
-        <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform transition-transform">
-          <div className="flex grow flex-col gap-y-5 overflow-y-auto px-6 pb-4">
-            <div className="flex h-16 shrink-0 items-center">
+        <aside className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-gray-100">
+          <div className="flex h-full flex-col gap-y-6 px-4 pb-4">
+            <div className="flex h-[60px] shrink-0 items-center px-2">
               <Link to="/" className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                <svg className="h-8 w-8 text-primary-600" viewBox="0 0 32 32" fill="none">
-                  <rect width="32" height="32" rx="6" fill="currentColor"/>
-                  <path d="M8 12h16M8 16h12M8 20h8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                </svg>
-              <span className="text-xl font-bold text-gray-900">Agent Station</span>
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-900 text-white">
+                  <div className="h-3 w-3 rounded-sm border-[1.5px] border-white/90" />
+                </div>
+                <span className="text-[15px] font-semibold tracking-tight">Agent Station</span>
               </Link>
             </div>
             <nav className="flex flex-1 flex-col">
-              <ul role="list" className="flex flex-1 flex-col gap-y-7">
-                <li>
-                  <ul role="list" className="-mx-2 space-y-1">
-                    {navigation.map((item) => (
-                      <li key={item.name}>
-                        <Link
-                          to={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={clsx(
-                            'group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-semibold',
-                            location.pathname === item.href || location.pathname.startsWith(item.href + '/')
-                              ? 'bg-primary-50 text-primary-700'
-                              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                          )}
-                        >
-                          <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                          {item.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-                <li className="mt-auto">
-                  <div className="rounded-xl bg-gray-50 p-3">
-                    {authChecked && user ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-                            {user.display_name.slice(0, 1).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate font-medium text-gray-900">{user.display_name}</div>
-                            <div className="truncate text-xs text-gray-500">@{user.username}</div>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5">
-                          <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-                            <KeyRound className="h-3.5 w-3.5" /> 改密码
-                          </button>
-                          <button onClick={() => { setMobileMenuOpen(false); handleLogout() }} className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 ring-1 ring-gray-200">
-                            <LogOut className="h-3.5 w-3.5" /> 退出
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white">
-                        <LogIn className="h-4 w-4" /> 登录
+              <ul className="space-y-1">
+                {navigation.map((item) => {
+                  const active = location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        to={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={clsx(
+                          'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium',
+                          active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
+                        )}
+                      >
+                        <item.icon className={clsx('h-[18px] w-[18px]', active ? 'text-white' : 'text-gray-400')} />
+                        {item.name}
                       </Link>
-                    )}
-                  </div>
-                </li>
+                    </li>
+                  )
+                })}
               </ul>
+              <div className="mt-auto rounded-xl border border-gray-100 bg-gray-50/50 p-3">
+                {authChecked && user ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
+                        {user.display_name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{user.display_name}</div>
+                        <div className="truncate text-xs text-gray-500">@{user.username}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button onClick={() => { setMobileMenuOpen(false); setShowPwdModal(true) }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">密码</button>
+                      <button onClick={() => { setMobileMenuOpen(false); handleLogout() }} className="rounded-lg bg-white px-2 py-1.5 text-xs font-medium ring-1 ring-gray-200">退出</button>
+                    </div>
+                  </div>
+                ) : (
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex w-full justify-center rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white">登录</Link>
+                )}
+              </div>
             </nav>
           </div>
         </aside>
       )}
 
       {/* 主内容区 */}
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm lg:px-8">
-          <h1 className="flex-1 text-lg font-semibold text-gray-900">
+      <div className="lg:pl-[220px]">
+        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-4 border-b border-gray-100 bg-white/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:px-6">
+          <h1 className="flex-1 pl-10 text-sm font-medium tracking-tight text-gray-900 lg:pl-0">
             {navigation.find((n) => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Agent Station'}
           </h1>
           <div className="flex items-center gap-2">
@@ -302,21 +293,21 @@ export function Layout() {
                 <span className="hidden items-center gap-1.5 text-sm text-gray-600 sm:inline-flex">
                   <User className="h-4 w-4 text-gray-400" /> {user.display_name}
                 </span>
-                <button onClick={() => setShowPwdModal(true)} className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 sm:ml-2">
-                  <KeyRound className="h-4 w-4" /> 修改密码
+                <button onClick={() => setShowPwdModal(true)} className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                  <KeyRound className="h-3.5 w-3.5" /> 修改密码
                 </button>
-                <button onClick={handleLogout} className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-black">
-                  <LogOut className="h-4 w-4" /> 退出
+                <button onClick={handleLogout} className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
+                  <LogOut className="h-3.5 w-3.5" /> 退出
                 </button>
               </>
             ) : (
-              <Link to="/login" className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-700">
+              <Link to="/login" className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
                 <LogIn className="h-4 w-4" /> 登录
               </Link>
             )}
           </div>
         </header>
-        <main className="py-6 px-4 lg:px-8">
+        <main className="px-4 py-6 lg:px-6">
           <Outlet />
         </main>
       </div>

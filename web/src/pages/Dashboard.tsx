@@ -12,19 +12,18 @@ interface StatCardProps {
   value: string | number
   icon: React.ReactNode
   trend?: string
-  color: string
 }
 
-function StatCard({ title, value, icon, trend, color }: StatCardProps) {
+function StatCard({ title, value, icon, trend }: StatCardProps) {
   return (
-    <div className="card p-6">
+    <div className="card p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
-          {trend && <p className="mt-1 text-sm text-green-600">{trend}</p>}
+          <p className="text-xs font-medium tracking-wide text-gray-500">{title}</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-gray-900">{value}</p>
+          {trend && <p className="mt-1 text-xs text-gray-500">{trend}</p>}
         </div>
-        <div className={clsx('p-3 rounded-xl', color)}>{icon}</div>
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-600 ring-1 ring-gray-100">{icon}</div>
       </div>
     </div>
   )
@@ -83,30 +82,10 @@ export function Dashboard() {
 
       {/* 统计卡片 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="总日志数"
-          value={stats?.total_logs ?? 0}
-          icon={<FileText className="h-8 w-8 text-white" />}
-          color="bg-primary-100"
-        />
-        <StatCard
-          title="预估 Token"
-          value={stats?.total_tokens ? stats.total_tokens.toLocaleString() : 0}
-          icon={<TrendingUp className="h-8 w-8 text-white" />}
-          color="bg-green-100"
-        />
-        <StatCard
-          title="Agent 类型"
-          value={Object.keys(stats?.by_agent ?? {}).length}
-          icon={<Bot className="h-8 w-8 text-white" />}
-          color="bg-purple-100"
-        />
-        <StatCard
-          title="活跃任务"
-          value={totalActive}
-          icon={<KanbanSquare className="h-8 w-8 text-white" />}
-          color="bg-orange-100"
-        />
+        <StatCard title="总日志数" value={stats?.total_logs ?? 0} icon={<FileText className="h-5 w-5" />} />
+        <StatCard title="预估 Token" value={stats?.total_tokens ? stats.total_tokens.toLocaleString() : 0} icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard title="Agent 类型" value={Object.keys(stats?.by_agent ?? {}).length} icon={<Bot className="h-5 w-5" />} />
+        <StatCard title="活跃任务" value={totalActive} icon={<KanbanSquare className="h-5 w-5" />} />
       </div>
 
       {/* 快速操作 + 最近活动 */}
