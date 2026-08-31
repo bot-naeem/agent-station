@@ -288,6 +288,9 @@ export const authApi = {
 
   me: async () =>
     (await api.get<{ id: string; username: string; display_name: string; email: string | null; is_superuser: boolean; is_active: boolean }>('/auth/me')).data,
+
+  changePassword: async (data: { old_password: string; new_password: string }) =>
+    (await api.post('/auth/change-password', data)).data,
 }
 
 export const tasksApi = {

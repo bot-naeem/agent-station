@@ -32,6 +32,11 @@ class TokenResponse(BaseModel):
     token: str
 
 
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     payload: LoginRequest,
@@ -83,6 +88,49 @@ async def logout(response: Response):
     from app.core.auth import clear_auth_cookie
     clear_auth_cookie(response)
     return {"message": "已登出"}
+
+
+@router.post("/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """修改当前登录管理员的密码"""
+    from app.core.auth import decode_token
+    import jwt
+    from app.core.config import get_settings
+    from uuid import UUID
+
+    token = request.cookies.get("admin_token")
+    if not token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+    if not token:
+        raise HTTPException(status_code=401, detail="未登录")
+
+    settings = get_settings()
+    try:
+        data = jwt.decode(token, settings.api_secret_key, algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token 无效")
+
+    result = await db.execute(select(AdminUser).where(AdminUser.id == UUID(data["sub"])))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="用户不存在或已禁用")
+
+    if not user.verify_password(payload.old_password):
+        raise HTTPException(status_code=400, detail="原密码错误")
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="新密码至少 6 位")
+
+    user.password_hash = AdminUser.hash_password(payload.new_password)
+    await db.commit()
+    return {"message": "密码修改成功"}
 
 
 @router.get("/me")
