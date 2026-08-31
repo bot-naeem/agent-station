@@ -12,6 +12,7 @@ from app.core.auth import decode_token
 
 
 async def get_current_agent_from_api_key(
+    request: Request,
     x_api_key: str = Header(..., alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> Agent:
@@ -42,10 +43,11 @@ async def get_current_agent_from_api_key(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Update last_used_at
-    from datetime import datetime, timezone
-    agent.last_used_at = datetime.now(timezone.utc)
-    await db.commit()
+    # Update last_used_at only on write operations to avoid polling inflation
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        from datetime import datetime, timezone
+        agent.last_used_at = datetime.now(timezone.utc)
+        await db.commit()
     
     return agent
 
@@ -88,7 +90,7 @@ async def get_current_agent_or_admin(
     """Get current agent from API key OR admin from cookie (for unified API endpoints)"""
     # Try API key first (for agent CLI)
     if x_api_key:
-        return await get_current_agent_from_api_key(x_api_key, db)
+        return await get_current_agent_from_api_key(request, x_api_key, db)
     
     # Try cookie token (for web UI)
     admin = await get_current_admin_from_cookie(request, db)
@@ -110,7 +112,7 @@ async def get_current_unified(
     """Get unified agent/admin interface"""
     # Try API key first (for agent CLI)
     if x_api_key:
-        return await get_current_agent_from_api_key(x_api_key, db)
+        return await get_current_agent_from_api_key(request, x_api_key, db)
     
     # Try cookie token (for web UI)
     admin = await get_current_admin_from_cookie(request, db)
