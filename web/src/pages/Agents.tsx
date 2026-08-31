@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { agentApi, authApi, type AgentResponse, type AgentCreate } from '../services/api'
 import { clsx } from 'clsx'
 import {
-  ShieldCheck, Plus, Search, Bot, Activity, Crown, Clock,
+  ShieldCheck, Plus, Search, Bot, Activity, Clock,
   Pencil, KeyRound, Trash2, X, AlertTriangle, Copy, Check,
   Loader2, Ban, Fingerprint, Info, BookOpen, Terminal, Plug, Wrench,
   GraduationCap, Copy as CopyIcon,
@@ -23,10 +23,9 @@ const PERMISSION_META: Record<string, { label: string; desc: string; chip: strin
   read_all:      { label: '读取全部', desc: '可查看所有 Agent 的日志',          chip: 'bg-sky-50 text-sky-700 ring-sky-200' },
   read_specific: { label: '指定读取', desc: '仅可查看下方指定 Agent 的日志',    chip: 'bg-cyan-50 text-cyan-700 ring-cyan-200' },
   write_own:     { label: '写入自己', desc: '可写入自己的日志',                 chip: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  admin:         { label: '管理员',   desc: '拥有平台全部管理权限',             chip: 'bg-violet-50 text-violet-700 ring-violet-200' },
 }
 
-const PERMISSION_ORDER = ['read_own', 'read_all', 'read_specific', 'write_own', 'admin']
+const PERMISSION_ORDER = ['read_own', 'read_all', 'read_specific', 'write_own']
 
 const AVATAR_COLORS = [
   'bg-gradient-to-br from-sky-500 to-blue-600',
@@ -618,7 +617,6 @@ export function Agents() {
   const stats = useMemo(() => [
     { label: 'Agent 总数', value: agents.length, icon: Bot, tone: 'bg-sky-50 text-sky-600' },
     { label: '启用中', value: agents.filter(a => a.is_active).length, icon: Activity, tone: 'bg-emerald-50 text-emerald-600' },
-    { label: '管理员权限', value: agents.filter(a => a.permissions.includes('admin')).length, icon: Crown, tone: 'bg-violet-50 text-violet-600' },
     { label: '近 7 天活跃', value: agents.filter(a => a.last_used_at && Date.now() - new Date(a.last_used_at).getTime() < 7 * 86400_000).length, icon: Clock, tone: 'bg-amber-50 text-amber-600' },
   ], [agents])
 
@@ -674,7 +672,7 @@ export function Agents() {
       )}
 
       {/* 统计卡片 */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {stats.map(s => (
           <div key={s.label} className="card p-5">
             <div className="flex items-center justify-between">

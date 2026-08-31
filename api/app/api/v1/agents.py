@@ -25,7 +25,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 async def get_current_admin(
     current_user = Depends(get_current_agent_or_admin)
 ) -> AdminUser:
-    """Get current admin user (must be AdminUser with ADMIN permission)"""
+    """Get current human admin (only AdminUser, no agent admin)"""
     if isinstance(current_user, AdminUser):
         if not current_user.is_superuser:
             raise HTTPException(
@@ -33,17 +33,10 @@ async def get_current_admin(
                 detail="Admin permission required"
             )
         return current_user
-    else:
-        # Agent user - check if they have admin permission
-        if not current_user.has_permission(AgentPermission.ADMIN):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Admin permission required"
-            )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Agent users cannot manage other agents"
-        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only human admin can manage agents"
+    )
 
 
 @router.post("", response_model=AgentResponse, status_code=201)
@@ -52,7 +45,10 @@ async def create_agent(
     db: AsyncSession = Depends(get_db),
     current_admin: AdminUser = Depends(get_current_admin),
 ):
-    """Create a new agent (admin only)"""
+    """Create a new agent (human admin only)"""
+    # Reject admin permission for agents
+    if payload.permissions and "admin" in payload.permissions:
+        raise HTTPException(status_code=400, detail="Agent cannot have admin permission")
     # Check if name already exists
     existing = await db.execute(select(Agent).where(Agent.name == payload.name))
     if existing.scalar_one_or_none():
@@ -202,6 +198,8 @@ async def update_agent(
         raise HTTPException(status_code=400, detail="Cannot deactivate yourself")
     
     update_data = payload.model_dump(exclude_unset=True)
+    if "permissions" in update_data and update_data["permissions"] and "admin" in update_data["permissions"]:
+        raise HTTPException(status_code=400, detail="Agent cannot have admin permission")
     for field, value in update_data.items():
         if field == "readable_agent_ids":
             import json

@@ -40,5 +40,4 @@ export const AGENT_PERMISSIONS = [
   'read_all',
   'read_specific',
   'write_own',
-  'admin',
 ] as const

@@ -38,6 +38,10 @@ def has_permission(agent: Agent | AdminUser, perm) -> bool:
     return agent.has_permission(perm)
 
 
+def is_human_admin(agent: Agent | AdminUser) -> bool:
+    return isinstance(agent, AdminUser)
+
+
 @router.post("/blog", response_model=BlogPostResponse, status_code=201)
 async def create_blog_post(
     payload: BlogPostCreate,
@@ -61,8 +65,8 @@ async def list_blog_posts(
     """List blog posts with filtering. Public sees only published."""
     service = BlogService(db)
 
-    # Non-admin users see only published by default
-    if not has_permission(current_agent, AgentPermission.ADMIN):
+    # Non-admin (agent) users see only published by default
+    if not is_human_admin(current_agent):
         if params.status != BlogStatus.published:
             params.status = BlogStatus.published
 
@@ -118,9 +122,9 @@ async def get_blog_post(
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found")
 
-    # Check read permission: published posts are public, drafts only to author/admin
+    # Check read permission: published posts are public, drafts only to author/human admin
     if post.status != BlogStatus.published:
-        is_admin = has_permission(current_agent, AgentPermission.ADMIN)
+        is_admin = is_human_admin(current_agent)
         if not is_admin and str(post.agent_id) != str(current_agent.id):
             raise HTTPException(status_code=403, detail="Cannot access this post")
 
@@ -134,9 +138,9 @@ async def update_blog_post(
     db: AsyncSession = Depends(get_db),
     current_agent = Depends(get_current_agent_or_admin),
 ):
-    """Update a blog post (author or admin)"""
+    """Update a blog post (author or human admin)"""
     service = BlogService(db)
-    is_admin = has_permission(current_agent, AgentPermission.ADMIN)
+    is_admin = is_human_admin(current_agent)
     post = await service.update(blog_id, payload, current_agent, is_admin)
     if not post:
         raise HTTPException(status_code=404, detail="Blog post not found or no permission")
@@ -149,9 +153,9 @@ async def delete_blog_post(
     db: AsyncSession = Depends(get_db),
     current_agent = Depends(get_current_agent_or_admin),
 ):
-    """Delete a blog post (author or admin)"""
+    """Delete a blog post (author or human admin)"""
     service = BlogService(db)
-    is_admin = has_permission(current_agent, AgentPermission.ADMIN)
+    is_admin = is_human_admin(current_agent)
     success = await service.delete(blog_id, current_agent, is_admin)
     if not success:
         raise HTTPException(status_code=404, detail="Blog post not found or no permission")

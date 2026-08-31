@@ -15,12 +15,11 @@ from app.models.base import Base
 
 
 class AgentPermission(str, enum.Enum):
-    """Agent permission levels"""
+    """Agent permission levels (human admin is separate via AdminUser)"""
     READ_OWN = "read_own"           # Can read own logs only
     READ_ALL = "read_all"           # Can read all agents' logs
     READ_SPECIFIC = "read_specific" # Can read specific agents' logs (via agent_permissions)
     WRITE_OWN = "write_own"         # Can write to own agent_type only
-    ADMIN = "admin"                 # Full access
 
 
 class Agent(Base):
@@ -123,9 +122,7 @@ class Agent(Base):
         return False
 
     def can_write_as_agent(self, target_agent_type: str) -> bool:
-        """Check if this agent can write logs as a specific agent_type"""
-        if self.has_permission(AgentPermission.ADMIN):
-            return True
+        """Check if this agent can write logs as a specific agent_type (only own type)"""
         return self.agent_type == target_agent_type
 
     def to_dict(self, include_key: bool = False) -> dict:
