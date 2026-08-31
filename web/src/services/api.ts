@@ -25,9 +25,11 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // 未授权，清除本地状态、跳转登录
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
+      const url = error.config?.url || ''
+      const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/me')
+      const isLoginPage = typeof window !== 'undefined' && window.location.pathname.includes('/login')
+      if (!isAuthEndpoint && !isLoginPage && typeof window !== 'undefined') {
+        window.location.href = '/app/login'
       }
     }
     return Promise.reject(error)
