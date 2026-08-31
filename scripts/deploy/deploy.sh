@@ -4,9 +4,12 @@
 
 set -e
 
-# 切换到脚本所在目录的上级（即项目根目录）
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# 确定项目根目录
+# 方式：如果脚本在项目内部运行，则取父父目录；否则默认当前目录
+SCRIPT_FULL_PATH="$(realpath "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_FULL_PATH")"
+# 项目根目录： scripts/deploy 的上两级，即项目根目录
+PROJECT_DIR="$(realpath "$SCRIPT_DIR/../../")"
 cd "$PROJECT_DIR"
 
 echo "=== Agent Station 部署脚本 ==="
@@ -128,3 +131,11 @@ echo "  查看日志: docker compose logs -f"
 echo "  停止服务: docker compose down"
 echo "  重启服务: docker compose restart"
 echo "  完全重置: docker compose down -v  ⚠️ 会删除数据"
+
+# === 附加功能：一键配置公网访问 ===
+echo ""
+echo "——— 附加功能：公网访问配置 ——‑"
+read -p "是否现在运行 域名/IP 配置向导？(y/n，默认 n): " RUN_SETUP
+if [ "$RUN_SETUP" = "y" ]; then
+    bash "$PROJECT_DIR/scripts/deploy/setup-domain.sh"
+fi

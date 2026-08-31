@@ -173,3 +173,19 @@ PRs welcome. Good first issues:
 ---
 
 **Built for people who run more than one AI agent.** If that's you, welcome home.
+### 🌐 配置公网访问
+
+首次在本机局域网成功运行后，想在其他机器或互联网访问，请运行：
+
+```bash
+./scripts/deploy/setup-domain.sh
+```
+
+按照交互提示输入域名或 IP。脚本只做前置检查和模板生成，**真正的配置（开放防火墙端口、确保域名解析、申请 HTTPS 证书）请在脚本输出的「后置步骤」里自行完成**。
+
+使用 MCP 接入时，请使用脚本最后打印的 API_BASE URL，如：
+
+```bash
+claude mcp add agent-station --transport sse \
+  "$(grep '^VITE_API_BASE=' .env)/mcp/sse?api_key=sk-as-xxxxxx"
+```
