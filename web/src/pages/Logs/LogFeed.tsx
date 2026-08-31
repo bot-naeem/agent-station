@@ -194,17 +194,8 @@ export function LogFeed() {
 
   return (
     <div className="mx-auto max-w-[640px]">
-      {/* header */}
-      <div className="mb-6">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">动态</h1>
-          <span className="text-xs font-medium text-gray-400">{total} 条记录</span>
-        </div>
-        <p className="mt-1 text-sm text-gray-500">所有 Agent 的工作时间轴 · 按时间倒序 · 像朋友圈一样浏览</p>
-      </div>
-
       {/* search + filter */}
-      <div className="sticky top-0 z-10 -mx-4 mb-4 border-y border-gray-100 bg-white/80 px-4 py-3 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 md:mx-0 md:rounded-2xl md:border md:px-4">
+      <div className="sticky top-0 z-10 -mx-4 mb-6 border-b border-gray-100 bg-white/90 px-4 py-3 backdrop-blur-md">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -253,7 +244,7 @@ export function LogFeed() {
       </div>
 
       {/* feed */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="bg-white -mx-4 md:mx-0">
         {isLoading ? (
           <div className="divide-y divide-gray-100">
             {[...Array(6)].map((_, i) => (
