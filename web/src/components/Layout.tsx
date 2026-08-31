@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { LayoutDashboard, List, Menu, X, Shield, FileText, KanbanSquare, LogIn, LogOut, KeyRound, User, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, List, Menu, X, Shield, FileText, KanbanSquare, LogIn, LogOut, KeyRound, ChevronDown } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { clsx } from 'clsx'
 import { authApi } from '../services/api'
@@ -115,14 +115,11 @@ export function Layout() {
   const [user, setUser] = useState<{ username: string; display_name: string } | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [showPwdModal, setShowPwdModal] = useState(false)
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false)
-  const headerMenuRef = useRef<HTMLDivElement>(null)
   const sidebarMenuRef = useRef<HTMLDivElement>(null)
 
   const isLogin = location.pathname === '/login'
 
-  useClickOutside(headerMenuRef, () => setHeaderMenuOpen(false), headerMenuOpen)
   useClickOutside(sidebarMenuRef, () => setSidebarMenuOpen(false), sidebarMenuOpen)
 
   useEffect(() => {
@@ -147,7 +144,6 @@ export function Layout() {
       await authApi.logout()
     } catch { /* ignore */ }
     setUser(null)
-    setHeaderMenuOpen(false)
     setSidebarMenuOpen(false)
     navigate({ to: '/login' })
   }
@@ -317,45 +313,10 @@ export function Layout() {
 
       {/* Main content */}
       <div className="lg:pl-[220px]">
-        <header className="sticky top-0 z-30 flex h-[60px] items-center gap-4 border-b border-gray-100 bg-white/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:px-6">
-          <h1 className="flex-1 pl-10 text-sm font-medium tracking-tight text-gray-900 lg:pl-0">
+        <header className="sticky top-0 z-30 flex h-[60px] items-center border-b border-gray-100 bg-white/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:px-6">
+          <h1 className="pl-10 text-sm font-medium tracking-tight text-gray-900 lg:pl-0">
             {navigation.find((n) => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Agent Station'}
           </h1>
-          <div className="flex items-center gap-2">
-            {authChecked && user ? (
-              <div ref={headerMenuRef} className="relative">
-                <button
-                  onClick={() => setHeaderMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white pl-1 pr-3 py-1 hover:bg-gray-50"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
-                    {user.display_name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="hidden text-sm font-medium text-gray-700 sm:inline">{user.display_name}</span>
-                  <ChevronDown className={clsx('h-4 w-4 text-gray-400 transition-transform', headerMenuOpen && 'rotate-180')} />
-                </button>
-                {headerMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-gray-100 bg-white p-1.5 shadow-lg">
-                    <div className="px-3 py-2">
-                      <div className="text-sm font-medium text-gray-900">{user.display_name}</div>
-                      <div className="text-xs text-gray-500">@{user.username}</div>
-                    </div>
-                    <div className="my-1 h-px bg-gray-100" />
-                    <button onClick={() => { setHeaderMenuOpen(false); setShowPwdModal(true) }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      <KeyRound className="h-4 w-4 text-gray-400" /> Change Password
-                    </button>
-                    <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
-                      <LogOut className="h-4 w-4" /> Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link to="/login" className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black">
-                <LogIn className="h-4 w-4" /> Login
-              </Link>
-            )}
-          </div>
         </header>
         <main className="px-4 py-6 lg:px-6">
           <Outlet />
