@@ -186,14 +186,14 @@ url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
 # Verify: codex mcp list
 # Note: Codex and ChatGPT desktop app share ~/.codex/config.toml — one config works for both.
 
-For ChatGPT App (Plus/Pro/Business/Edu, Developer Mode required):
-1. Enable Developer Mode: ChatGPT -> Settings -> Apps & Connectors -> Advanced Settings -> toggle Developer Mode on
-2. Add MCP server: Settings -> Apps & Connectors -> Add server (or Create)
-   - 名称: Agent Station
-   - 类型: 务必选择 流式 HTTP (Streamable HTTP) — 不要选 STDIO (STDIO 的 启动命令/参数/环境变量/工作目录 是用于本地命令如 openai-dev-mcp serve-sqlite，不适用于本远程服务，选了会连接失败)
-   - URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY
-   - 认证/Headers: 保持 None 即可 (key 已在 URL 的 api_key 参数中；如界面要求 Token，粘贴同样的 sk-as-... 亦可)
-3. 保存 -> 重启 ChatGPT。新开对话后工具即出现 (ChatGPT 仅支持远程 HTTPS，本地 localhost 无法连接)。
+For ChatGPT App (Plus/Pro/Business/Edu): Let the agent edit the config file directly — no manual form filling needed.
+File: ~/.codex/config.toml (shared by Codex CLI and ChatGPT desktop app; create if not exists)
+Add:
+[mcp_servers.agent-station]
+url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+# Or run: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=YOUR_API_KEY" && codex mcp list
+Then restart ChatGPT (new chat). Verify via codex mcp list or check the file contains the table.
+# If you must use the UI form: Settings -> Apps & Connectors -> Advanced Settings -> enable Developer Mode -> Add server -> 名称: Agent Station, 类型: 选 流式 HTTP (不要 STDIO), URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY, 认证: None, 保存 -> 重启 (STDIO 的 启动命令/参数/环境变量 是本地模式，不适用于本远程服务).
 
 For Antigravity (agy), edit ~/.gemini/config/mcp_config.json (global) or ./.agents/mcp_config.json (project):
 {
