@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useQueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { Loader2, Clock, CalendarDays, Inbox, Tag as TagIcon, Check, Search, Eye, X, Copy, FileText } from 'lucide-react'
+import { Loader2, Clock, CalendarDays, Inbox, Tag as TagIcon, Check, Search, Eye, X, Copy, FileText, Trash2, AlertTriangle } from 'lucide-react'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { markdownApi, type MarkdownLog } from '../../services/api'
@@ -69,7 +69,7 @@ function groupByDate(items: MarkdownLog[]) {
   return groups
 }
 
-function LogCard({ log, onView }: { log: MarkdownLog; onView: (l: MarkdownLog) => void }) {
+function LogCard({ log, onView, onDelete }: { log: MarkdownLog; onView: (l: MarkdownLog) => void; onDelete: (l: MarkdownLog) => void }) {
   const name = displayName(log)
   const tags = (log.front_matter?.tags as string[] | undefined) ?? []
   const title = log.title || log.file_path.split('/').pop()?.replace('.md', '') || 'Untitled'
@@ -94,8 +94,21 @@ function LogCard({ log, onView }: { log: MarkdownLog; onView: (l: MarkdownLog) =
           <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white">{log.agent_type}</span>
           <span className="text-xs text-gray-400">·</span>
           <time className="text-xs text-gray-400" title={log.log_date}>{timeAgo(log.created_at)}</time>
-          <span className="ml-auto hidden items-center gap-1 rounded-full bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm group-hover:inline-flex md:inline-flex md:opacity-0 md:group-hover:opacity-100 transition">
-            <Eye className="h-3 w-3" /> Preview
+          <span className="ml-auto hidden items-center gap-1 group-hover:inline-flex md:inline-flex md:opacity-0 md:group-hover:opacity-100 transition">
+            <button
+              onClick={(e) => { e.stopPropagation(); onView(log) }}
+              title="Preview"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-900 hover:text-white"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(log) }}
+              title="Delete"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </span>
         </div>
 
@@ -291,6 +304,9 @@ function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: ()
 export function LogFeed() {
   const queryClient = useQueryClient()
   const [previewId, setPreviewId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<MarkdownLog | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [filterTag, setFilterTag] = useState<string | undefined>(undefined)
   const [query, setQuery] = useState('')
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -336,6 +352,21 @@ export function LogFeed() {
     window.addEventListener('alp:invalidate-logs', invalidate)
     return () => window.removeEventListener('alp:invalidate-logs', invalidate)
   }, [queryClient])
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await markdownApi.delete(deleteTarget.id)
+      setDeleteTarget(null)
+      queryClient.invalidateQueries({ queryKey: ['markdown-logs-feed'] })
+    } catch (e: any) {
+      setDeleteError(e.response?.data?.detail || 'Failed to delete, please try again')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const items = data?.pages.flatMap((p) => p.items) ?? []
   const total = data?.pages[0]?.total ?? 0
@@ -432,7 +463,7 @@ export function LogFeed() {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {group.items.map((log) => (
-                    <LogCard key={log.id} log={log} onView={(l) => setPreviewId(l.id)} />
+                    <LogCard key={log.id} log={log} onView={(l) => setPreviewId(l.id)} onDelete={(l) => { setDeleteError(''); setDeleteTarget(l) }} />
                   ))}
                 </div>
               </div>
@@ -453,6 +484,35 @@ export function LogFeed() {
       </div>
 
       <p className="mt-6 text-center text-xs text-gray-400">Scroll to load more · Full-text search and tag filtering supported</p>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => !deleting && setDeleteTarget(null)} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl ring-1 ring-gray-900/5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Delete log?</h3>
+                <p className="text-xs text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="mt-4 line-clamp-2 text-sm text-gray-600">{deleteTarget.title || deleteTarget.file_path}</p>
+            {deleteError && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {deleteError}
+              </div>
+            )}
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="btn-secondary px-4 py-1.5 text-sm disabled:opacity-50">Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} className="btn-danger inline-flex items-center gap-1.5 px-4 py-1.5 text-sm disabled:opacity-50">
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LogPreviewModal logId={previewId} onClose={() => setPreviewId(null)} />
     </div>
