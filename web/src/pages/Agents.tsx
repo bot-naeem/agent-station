@@ -158,247 +158,74 @@ function CopyBlock({ code, label }: { code: string; label?: string }) {
 /* ---------------------------- MCP Guide Modal (includes Skill Template) ---------------------------- */
 
 function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose: () => void }) {
- const [skillContent, setSkillContent] = useState('')
- const [skillLoading, setSkillLoading] = useState(true)
- const [skillError, setSkillError] = useState('')
- const [skillCopied, setSkillCopied] = useState(false)
+ const mcpSnippet = `Please connect to the Agent Station platform.
 
- useEffect(() => {
-  fetch(SKILL_TEMPLATE_URL)
-   .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.text() })
-   .then(setSkillContent)
-   .catch(() => setSkillError('Failed to load template'))
-   .finally(() => setSkillLoading(false))
- }, [])
+Platform: Agent Station
+URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY  (replace YOUR_API_KEY with the real sk-as-... key, shown once at creation)
+Transport: SSE (Claude Code/OpenCode) / Streamable HTTP (Antigravity)
 
- const copySkillAll = async () => {
-  if (!skillContent) return
-  try {
-   await navigator.clipboard.writeText(skillContent)
-   setSkillCopied(true)
-   setTimeout(() => setSkillCopied(false), 2000)
-  } catch { /* ignore */ }
- }
- const keyHint = 'sk-as-xxxxxxxxxxxx'
- const addCommand = `claude mcp add agent-station --transport sse \\\n "${MCP_SSE_URL}?api_key=${keyHint}"`
+For Claude Code, run:
+claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+Then verify: claude mcp list  ->  agent-station ... ✓ Connected
+
+For OpenCode, edit ~/.config/opencode/opencode.json:
+{
+  "mcp": {
+    "agent-station": {
+      "type": "remote",
+      "url": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+    }
+  }
+}
+Restart OpenCode.
+
+For Antigravity (agy), edit ~/.gemini/config/mcp_config.json (global) or ./.agents/mcp_config.json (project):
+{
+  "mcpServers": {
+    "agent-station": {
+      "serverUrl": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+    }
+  }
+}
+Start a new agy session (server supports dual protocol: same URL works for SSE and Streamable HTTP).
+
+After connected, after each important task call write_log(title + content Markdown with Background/Steps/Result/Pitfalls, tags with YYYY-MM-DD), and use read_logs / search_logs to review history.`
+
+ const skillSnippet = `Please install the Agent Station Skill (so you know when/how to use the 13 MCP tools).
+
+1. web-fetch ${SKILL_TEMPLATE_URL}
+2. Fill section ① Identity (Name, Vibe, Creature...) and ③ Custom (your playbooks); keep ② Platform Protocol unchanged — it already contains all 13 tools
+3. Save as ~/.claude/skills/<name>/SKILL.md  (choose a short name, frontmatter "name" = slash command like /<name>)
+4. Verify: claude mcp list shows agent-station ✓ Connected, then /<name> — the skill will auto-call list_tasks + read_logs to recover context and enter standby.`
 
  return (
   <Modal onClose={onClose} wide>
    <ModalHeader
     icon={<BookOpen className="h-5 w-5" />}
     title={agent ? `Guide · ${agent.display_name}` : 'Agent Connection Guide'}
-    desc="Connect via MCP and enable the Skill so your agent logs and manages tasks automatically"
+    desc="Copy the two snippets below and paste to your agent — it will handle the rest"
     onClose={onClose}
    />
 
-   <div className="space-y-6 overflow-y-auto px-6 py-5 scrollbar-thin">
-    {/* Step 1 */}
+   <div className="space-y-4 overflow-y-auto px-6 py-5 scrollbar-thin">
     <section>
-     <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+     <div className="mb-2 flex items-center gap-2">
       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[11px] font-bold text-white">1</span>
-      Get API Key
-     </h4>
-     <p className="text-sm leading-relaxed text-gray-600">
-      Click "New Agent" on this page to create an account. After creation, a one-time API Key will be generated (<code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-xs">sk-as-</code> prefix).
-      {agent && <> If the Key is lost, click the key icon "Rotate Key" in the list to regenerate it.</>}
-     </p>
+      <h4 className="text-sm font-semibold text-gray-900">Snippet 1 — MCP Connection</h4>
+      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">send to agent first</span>
+     </div>
+     <p className="mb-2 text-xs leading-relaxed text-gray-500">Replace <code className="rounded bg-gray-100 px-1 font-mono">YOUR_API_KEY</code> with the real key for <b>{agent ? agent.display_name : 'this agent'}</b> before sending. Key is shown once at creation; if lost, rotate it in the list.</p>
+     <CopyBlock code={mcpSnippet} />
     </section>
 
-    {/* Step 2 */}
     <section>
-     <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[11px] font-bold text-white">2</span>
-      <Terminal className="h-4 w-4 text-gray-400" />
-      Run the connection command on the agent machine
-     </h4>
-     <div className="space-y-3">
-      <CopyBlock label="Claude Code" code={addCommand.replace(keyHint, 'YOUR_API_KEY')} />
-
-      <CopyBlock
-       label="OpenCode (edit ~/.config/opencode/opencode.json)"
-       code={`{
- "$schema": "https://opencode.ai/config.json",
- "mcp": {
-  "agent-station": {
-   "type": "remote",
-   "url": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-  }
- }
- // ...other configs remain unchanged
-}`}
-      />
-      <p className="-mt-1 text-xs leading-relaxed text-gray-400">
-       OpenCode v2 uses a flat structure <code className="rounded bg-gray-100 px-1 font-mono">mcp.{"{server-name}"}</code>, no servers nesting and no enabled field (enabled by default). Restart OpenCode after editing.
-      </p>
-
-      <CopyBlock
-       label="Antigravity CLI (edit ~/.gemini/config/mcp_config.json for global; ./.agents/mcp_config.json for project-level)"
-       code={`{
- "mcpServers": {
-  "agent-station": {
-   "serverUrl": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-  }
- }
-}`}
-      />
-      <p className="-mt-1 text-xs leading-relaxed text-gray-400">
-       Note: Antigravity remote SSE uses <code className="rounded bg-gray-100 px-1 font-mono">serverUrl</code> field (different from Claude Code's type+url structure). Start a new agy session after editing to load.
-       <br />Server supports <b>dual protocol</b>: the same URL is compatible with both SSE (GET) and Streamable HTTP (POST); Antigravity automatically uses Streamable HTTP.
-      </p>
-
-      <CopyBlock
-       label="Other MCP Clients (Codex / Cline etc.) — Connection URL"
-       code={`${MCP_SSE_URL}?api_key=YOUR_API_KEY`}
-      />
-      <CopyBlock
-       label="Verify Connection"
-       code={'claude mcp list\n# should show: agent-station ... ✓ Connected\n\nopencode\n# run in session /mcp or call tools directly, should show: ● ✓ agent-station connected\n\nagy\n# automatically fetches tool list on start; check logs at ~/.gemini/antigravity-cli/cli.log'}
-      />
+     <div className="mb-2 flex items-center gap-2">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white">2</span>
+      <h4 className="text-sm font-semibold text-gray-900">Snippet 2 — Skill Setup</h4>
+      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-700">recommended</span>
      </div>
-    </section>
-
-    {/* Step 3 */}
-    <section>
-     <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[11px] font-bold text-white">3</span>
-      <Wrench className="h-4 w-4 text-gray-400" />
-      Available Tools After Connection
-     </h4>
-     <div className="grid gap-2 sm:grid-cols-2">
-      {[
-       ['write_log', 'Write work log (title + content required)'],
-       ['read_logs', 'Read recent logs'],
-       ['search_logs', 'Full-text search history logs'],
-       ['get_stats', 'View log statistics'],
-      ].map(([name, desc]) => (
-       <div key={name} className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/50 p-2.5">
-        <code className="shrink-0 rounded bg-primary-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-primary-700">{name}</code>
-        <span className="text-xs leading-relaxed text-gray-600">{desc}</span>
-       </div>
-      ))}
-     </div>
-    </section>
-
-    {/* Complete Instructions for the Agent */}
-    <section className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
-     <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-violet-900">
-      <Plug className="h-4 w-4" />
-      Complete Instructions to Send to Your Agent (One-Click Copy)
-     </h4>
-     <p className="mb-2 text-xs leading-relaxed text-violet-700/80">
-      Paste the following text along with the commands to your agent and it will know what to do:
-     </p>
-     <CopyBlock
-      code={`Please connect to the Agent Station platform to record your work logs.
-
-1. Complete the MCP connection according to your client type (replace Your API_KEY with the actual value):
-
-  If you are using Claude Code, run:
-  claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-  Then run claude mcp list to confirm agent-station shows ✓ Connected
-
-  If you are using OpenCode, edit ~/.config/opencode/opencode.json and add:
-  {
-   "mcp": {
-    "agent-station": {
-     "type": "remote",
-     "url": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-    }
-   }
-  }
-  Save and restart OpenCode, confirm agent-station shows connected
-
-If you are using Antigravity CLI (agy), edit ~/.gemini/config/mcp_config.json and add:
- {
-  "mcpServers": {
-   "agent-station": {
-    "serverUrl": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-   }
-  }
- }
- Note to use the serverUrl field; start a new agy session after saving to load (server dual protocol: same URL supports both SSE and Streamable HTTP)
-
-2. Afterwards, after each important task, proactively call the write_log tool to record:
-  - title: One-sentence summary of what was done
-  - content: Markdown format, including Background / Steps / Result / Pitfalls
-  - tags: Keyword array for easy retrieval
-
-3. When you need to review past work, use read_logs to filter by date or Agent name, and search_logs for keyword search.`}
-     />
-    </section>
-
-    {/* Web-fetch Docs */}
-    <section className="rounded-xl border border-gray-200 p-4">
-     <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900">
-      <Info className="h-4 w-4 text-gray-400" />
-      Agent Self-Service Docs (web-fetch)
-     </h4>
-     <p className="mb-2 text-xs text-gray-500">
-      Have the agent fetch this plain Markdown URL to get the full connection docs — no manual relay needed:
-     </p>
-     <CopyBlock code={DOCS_URL} />
-    </section>
-
-    {/* Agent Skill Template (merged) */}
-    <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4">
-     <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-violet-900">
-      <GraduationCap className="h-4 w-4" />
-      Agent Skill Template <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Recommended</span>
-     </h4>
-     <p className="mb-3 text-xs leading-relaxed text-violet-800/80">
-      <b>MCP gives tools, Skill tells your agent how to use them.</b> Without Skill you must prompt <code className="rounded bg-violet-100 px-1 font-mono">write_log</code> every time; with Skill the agent logs automatically and <code className="rounded bg-violet-100 px-1 font-mono">/&lt;name&gt;</code> restores context via <code className="rounded bg-violet-100 px-1 font-mono">list_tasks</code> + <code className="rounded bg-violet-100 px-1 font-mono">read_logs</code>.
-     </p>
-     <div className="mb-3 rounded-lg border border-violet-200 bg-white p-3">
-      <p className="mb-2 text-xs font-medium text-violet-900">Have your local agent web-fetch the URL below (or copy full text on the right):</p>
-      <CopyBlock code={SKILL_TEMPLATE_URL} />
-     </div>
-     <div className="relative mb-3">
-      <div className="mb-1.5 flex items-center justify-between">
-       <span className="text-xs font-medium text-gray-500">Full Template (Markdown)</span>
-       <button
-        onClick={copySkillAll}
-        disabled={skillLoading || !skillContent}
-        className={clsx(
-         'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-         skillCopied ? 'bg-emerald-50 text-emerald-600' : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40',
-        )}
-       >
-        {skillCopied ? <><Check className="h-3.5 w-3.5" />Copied</> : <><CopyIcon className="h-3.5 w-3.5" />Copy All</>}
-       </button>
-      </div>
-      {skillLoading ? (
-       <div className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-10 text-sm text-gray-400">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading template...
-       </div>
-      ) : skillError ? (
-       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">{skillError}</div>
-      ) : (
-       <pre className="max-h-[36vh] overflow-auto rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words text-gray-100 scrollbar-thin select-all">
-{skillContent}
-       </pre>
-      )}
-     </div>
-     <div className="rounded-lg border border-gray-200 bg-white p-3">
-      <h5 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-900">
-       <Info className="h-4 w-4 text-gray-400" />Usage Steps
-      </h5>
-      <ol className="list-decimal space-y-0.5 pl-5 text-xs leading-relaxed text-gray-600">
-       <li>Copy the full text and save as <code className="rounded bg-gray-100 px-1 font-mono">~/.claude/skills/&lt;name&gt;/SKILL.md</code></li>
-       <li>Fill section 1 (Persona) and 3 (Custom) — leave section 2 (Platform Rules) unchanged</li>
-       <li>Ensure MCP is connected, then in session <code className="rounded bg-gray-100 px-1 font-mono">/&lt;name&gt;</code> to test</li>
-      </ol>
-     </div>
-    </section>
-
-    {/* FAQ */}
-    <section>
-     <h4 className="mb-2 text-sm font-semibold text-gray-900">FAQ</h4>
-     <div className="space-y-1.5 text-xs leading-relaxed text-gray-600">
-      <p>· <b>401 Unauthorized</b>: check that the api_key param uses underscore and the Key is complete (with sk-as- prefix)</p>
-      <p>· <b>Key Lost</b>: Key is shown only once at creation; if lost, rotate it in the list</p>
-      <p>· <b>Permission Isolation</b>: Regular Agents can only read/write their own logs, controlled automatically by RBAC</p>
-     </div>
+     <p className="mb-2 text-xs leading-relaxed text-gray-500">MCP gives tools, Skill tells when/how to use them. Agent will fetch the template itself.</p>
+     <CopyBlock code={skillSnippet} />
     </section>
    </div>
 
@@ -408,6 +235,7 @@ If you are using Antigravity CLI (agy), edit ~/.gemini/config/mcp_config.json an
   </Modal>
  )
 }
+
 
 /* ---------------------------------- Main Component ---------------------------------- */
 
