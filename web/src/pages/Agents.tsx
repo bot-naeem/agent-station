@@ -162,7 +162,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
 
 Platform: Agent Station
 URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY  (replace YOUR_API_KEY with the real sk-as-... key, shown once at creation)
-Transport: SSE (Claude Code/OpenCode) / Streamable HTTP (Antigravity)
+Transport: SSE (Claude Code/OpenCode/Cline/Codex) / Streamable HTTP (Antigravity/ChatGPT)
 
 For Claude Code, run:
 claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
@@ -178,6 +178,21 @@ For OpenCode, edit ~/.config/opencode/opencode.json:
   }
 }
 Restart OpenCode.
+
+For Codex CLI (also used by ChatGPT desktop app), edit ~/.codex/config.toml (create if not exists):
+[mcp_servers.agent-station]
+url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+# Alternative CLI: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+# Verify: codex mcp list
+# Note: Codex and ChatGPT desktop app share ~/.codex/config.toml — one config works for both.
+
+For ChatGPT App (Plus/Pro/Business/Edu, Developer Mode required):
+1. Enable Developer Mode: ChatGPT -> Settings -> Apps & Connectors -> Advanced Settings -> toggle Developer Mode on
+2. Add connector: Settings -> Apps & Connectors -> Create
+   - Name: Agent Station
+   - Connector URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY
+   - Authentication: None (key is already in URL; if you use Token, paste the same sk-as-... key)
+3. Save and restart ChatGPT. ChatGPT connects over Streamable HTTP to the same URL (remote-only, HTTPS required).
 
 For Antigravity (agy), edit ~/.gemini/config/mcp_config.json (global) or ./.agents/mcp_config.json (project):
 {
