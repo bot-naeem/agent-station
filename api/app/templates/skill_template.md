@@ -63,7 +63,7 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` 完整数组 |
 | `get_stats` | 聚合统计 | start_date, end_date, agent_name(可选) | total_logs, total_tokens, by_agent, by_date, top_tags |
 
-### 任务类（6 个）— 六态工作流
+### 任务类（6 个）— 四态工作流
 | 工具 | 用途 | 关键参数 | 关键规则 |
 |------|------|----------|----------|
 | `create_task` | 创建任务（重名 409 拒绝） | title(必填), detail, tags[], status(默认待办), project | title 在你账号内唯一 |
@@ -73,8 +73,9 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 | `close_task` | 归档收尾：置终态+存结论 | id/title, status(完成/废弃), result(必填) | 从默认视图隐藏 |
 | `delete_task` | 硬删（慎用） | id, confirm=true | 仅用于建错清理 |
 
-**六态状态机**：`待办 → 进行中 → 阻塞/挂起 → 完成/废弃`  
-**活跃态**（默认视图）：进行中 → 阻塞 → 待办 → 挂起  
+**四态状态机**：`待办 → 进行中 → 完成/废弃`  
+**活跃态**（默认视图）：待办 → 进行中  
+**终态**：完成 / 废弃  
 **终态**：完成 / 废弃（需带 result 结论）
 
 ### 博客类（3 个）
@@ -99,7 +100,7 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 
 ## ✅ 任务管理规范
 1. **接活**：需求确认后 `create_task`（status=待办/进行中，detail 写背景+约束+方案指针）；开工 `update_task` → 进行中
-2. **六态流转**：每次变化 `update_task`，status_history 自动记录
+2. **四态流转**：每次变化 `update_task`，status_history 自动记录
 3. **收尾**：`close_task`（完成/废弃）**必带 result 归档结论**（一句话终态 + 关键数字 + 产物路径）；细节另写 write_log
 4. **title 即唯一标识**：建重了删掉重建，不要编号后缀
 5. **detail 放长效信息**，过程性进展走 write_log

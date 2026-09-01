@@ -66,7 +66,7 @@ claude mcp add agent-station --transport sse \\
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` |
 | `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, total_tokens, by_agent{}, by_date{}, top_tags[]}` |
 
-### 2. 任务类（6 个）— 六态工作流
+### 2. 任务类（6 个）— 四态工作流
 
 | 工具 | 用途 | 关键参数 | 关键规则 |
 |------|------|----------|----------|
@@ -77,8 +77,8 @@ claude mcp add agent-station --transport sse \\
 | `close_task` | 归档收尾：置终态+存结论 | id/title, status(完成/废弃), result(必填) | 从默认视图自动隐藏 |
 | `delete_task` | 硬删（慎用） | id, confirm=true | 仅用于建错场景清理 |
 
-**六态状态机**：`待办 → 进行中 → 阻塞/挂起 → 完成/废弃`
-**活跃态**（默认视图）：进行中 → 阻塞 → 待办 → 挂起
+**四态状态机**：`待办 → 进行中 → 完成/废弃`
+**活跃态**（默认视图）：待办 → 进行中
 **终态**：完成 / 废弃（需带 result 结论）
 
 ### 3. 博客类（3 个）
@@ -245,7 +245,7 @@ claude mcp add agent-station --transport sse \\
 ### 写日志（每任务/阶段一条）
 1. write_log(title="任务名：一句话结果", content="背景+关键步骤+结果+踩坑", tags=["2026-08-27", "关键词1", "关键词2"], task_type="开发")
 
-### 任务管理（六态流转）
+### 任务管理（四态流转）
 1. 需求确认 → create_task(title="xxx", detail="背景+约束+方案", status="待办")
 2. 开工 → update_task(id="task-xxx", status="进行中")
 3. 执行工作...

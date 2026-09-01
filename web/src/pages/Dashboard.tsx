@@ -10,8 +10,6 @@ import { STATUS_COLOR, STATUS_ICON } from './Tasks/shared'
 const STATUS_LABEL: Record<string, string> = {
   '待办': 'Todo',
   '进行中': 'In Progress',
-  '阻塞': 'Blocked',
-  '挂起': 'Pending',
   '完成': 'Done',
   '废弃': 'Discarded',
 }

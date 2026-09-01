@@ -3,15 +3,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
   Plus, Search, LayoutGrid, Table2, Loader2, Inbox,
-  Archive, Pencil, Trash2, User, FolderKanban, X, AlertTriangle,
+  Archive, Pencil, Trash2, User, FolderKanban, X, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { tasksApi, agentApi, type Task } from '@/services/api'
-import { ALL_STATUSES, ACTIVE_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, STATUS_LABEL, isFinal, type TaskStatus } from './shared'
+import { ALL_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, STATUS_LABEL, isFinal, type TaskStatus } from './shared'
 import { TaskFormModal } from './TaskFormModal'
 import { TaskDrawer } from './TaskDrawer'
 
-/* ─────────────── Task Card ─────────────── */
+/* ─────────────── Task Card — polished ─────────────── */
 
 function TaskCard({
   task, onOpen, onEdit, onDelete, onCloseTask, dragging, setDraggingId,
@@ -36,69 +36,78 @@ function TaskCard({
       onDragEnd={() => setDraggingId(null)}
       onClick={() => onOpen(task)}
       className={clsx(
-        'group relative cursor-pointer rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-200 transition-all',
-        !final && 'hover:shadow-md hover:ring-primary-300 active:cursor-grabbing',
-        final && 'opacity-75 hover:opacity-100',
-        dragging && 'opacity-40 rotate-1',
+        'group relative cursor-pointer rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-900/5 transition-all',
+        'hover:shadow-md hover:ring-gray-900/10 hover:-translate-y-[1px]',
+        final && 'opacity-80 hover:opacity-100',
+        dragging && 'opacity-40 rotate-1 shadow-lg',
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* left accent bar */}
+      <div className={clsx('absolute inset-y-3 left-0 w-1 rounded-full', STATUS_BAR[task.status])} />
+
+      <div className="pl-2">
         <h4 className={clsx(
-          'line-clamp-2 text-sm font-medium leading-snug text-gray-900',
+          'line-clamp-2 text-[14px] font-semibold leading-snug text-gray-900',
           final && 'line-through decoration-gray-300',
         )}>{task.title}</h4>
-      </div>
 
-      {(task.project || (task.tags?.length ?? 0) > 0) && (
-        <div className="mt-2 flex flex-wrap items-center gap-1">
-          {task.project && (
-            <span className="inline-flex items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 text-[11px] text-primary-700">
-              <FolderKanban className="h-2.5 w-2.5" />{task.project}
+        {task.detail && (
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-gray-500">{task.detail.slice(0, 120)}…</p>
+        )}
+
+        {(task.project || (task.tags?.length ?? 0) > 0) && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {task.project && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-2 py-0.5 text-[11px] font-medium text-white">
+                <FolderKanban className="h-3 w-3 opacity-70" />{task.project}
+              </span>
+            )}
+            {task.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="rounded-full bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200">{tag}</span>
+            ))}
+            {task.tags.length > 2 && (
+              <span className="text-[11px] text-gray-400">+{task.tags.length - 2}</span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-[10px] font-medium text-gray-600">
+              {(task.agent_name || task.agent_id || '?').slice(0, 1).toUpperCase()}
             </span>
-          )}
-          {task.tags.slice(0, 2).map(tag => (
-            <span key={tag} className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500">{tag}</span>
-          ))}
-          {task.tags.length > 2 && (
-            <span className="text-[11px] text-gray-400">+{task.tags.length - 2}</span>
-          )}
+            <span className="truncate max-w-[90px]">{task.agent_name || task.agent_id.slice(0, 8)}</span>
+          </div>
+          <span className="shrink-0 rounded-full bg-gray-50 px-2 py-0.5 text-[11px] text-gray-500 ring-1 ring-gray-100">
+            {format(new Date(task.updated_at), 'MM/dd')}
+          </span>
         </div>
-      )}
-
-      <div className="mt-2.5 flex items-center justify-between">
-        <div className="flex min-w-0 items-center gap-1 text-xs text-gray-500">
-          <User className="h-3 w-3 shrink-0" />
-          <span className="truncate">{task.agent_name || task.agent_id.slice(0, 8)}</span>
-        </div>
-        <span className="shrink-0 text-[11px] text-gray-400">
-          {format(new Date(task.updated_at), 'MM-dd')}
-        </span>
       </div>
 
       {/* hover quick actions */}
-      <div className="absolute right-1.5 top-1.5 hidden gap-0.5 rounded-lg bg-white/95 p-0.5 shadow-md ring-1 ring-gray-200 group-hover:flex">
-        {!final ? (
+      <div className="absolute right-2 top-2 hidden gap-1 rounded-full bg-white/95 p-1 shadow-md ring-1 ring-gray-200 backdrop-blur group-hover:flex">
+        {!final && (
           <>
             <button
               title="Archive"
               onClick={e => { e.stopPropagation(); onCloseTask(task) }}
-              className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-emerald-600 hover:bg-emerald-50"
             >
               <Archive className="h-3.5 w-3.5" />
             </button>
             <button
               title="Edit"
               onClick={e => { e.stopPropagation(); onEdit(task) }}
-              className="rounded p-1 text-gray-500 hover:bg-gray-100"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
           </>
-        ) : null}
+        )}
         <button
           title="Delete"
           onClick={e => { e.stopPropagation(); onDelete(task) }}
-          className="rounded p-1 text-red-500 hover:bg-red-50"
+          className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -107,7 +116,7 @@ function TaskCard({
   )
 }
 
-/* ─────────────── Kanban Column ─────────────── */
+/* ─────────────── Kanban Column — polished ─────────────── */
 
 function KanbanColumn({
   status, tasks, isDropTarget, onDropColumn, cardProps,
@@ -129,7 +138,7 @@ function KanbanColumn({
   const final = isFinal(status)
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (final) return // Final columns don't accept direct drop (requires archive modal)
+    if (final) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
@@ -139,22 +148,23 @@ function KanbanColumn({
       onDragOver={handleDragOver}
       onDrop={e => { if (!final) { e.preventDefault(); onDropColumn(status) } }}
       className={clsx(
-        'flex w-[240px] shrink-0 flex-col rounded-xl bg-gray-100/70 transition-colors',
-        isDropTarget && !final && 'bg-primary-50 ring-2 ring-primary-300',
+        'flex w-[300px] shrink-0 flex-col rounded-2xl border bg-white shadow-sm transition-all',
+        isDropTarget && !final ? 'border-primary-300 bg-primary-50/50 shadow-md' : 'border-gray-100',
       )}
     >
       {/* Column header */}
-      <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-        <span className={clsx('h-2 w-2 rounded-full', STATUS_BAR[status])} />
-        <Icon className="h-3.5 w-3.5 text-gray-400" />
-        <span className="text-sm font-semibold text-gray-700">{STATUS_LABEL[status]}</span>
-        <span className="ml-auto rounded-full bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-gray-200">
+      <div className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-3.5">
+        <span className={clsx('flex h-7 w-7 items-center justify-center rounded-lg', STATUS_COLOR[status].split(' ')[0])}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="text-sm font-semibold tracking-tight text-gray-900">{STATUS_LABEL[status]}</span>
+        <span className="ml-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-900 px-2 text-xs font-medium text-white">
           {tasks.length}
         </span>
       </div>
 
       {/* Cards */}
-      <div className="scrollbar-thin flex max-h-[calc(100vh-22rem)] min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto px-2 pb-3">
+      <div className="scrollbar-thin flex max-h-[calc(100vh-22rem)] min-h-[140px] flex-1 flex-col gap-3 overflow-y-auto bg-gray-50/40 p-3">
         {tasks.map(t => (
           <TaskCard key={t.id} task={t} dragging={cardProps.draggingId === t.id}
             setDraggingId={cardProps.setDraggingId}
@@ -163,8 +173,9 @@ function KanbanColumn({
           />
         ))}
         {tasks.length === 0 && (
-          <div className="flex flex-1 items-center justify-center py-6">
-            <span className="text-xs text-gray-300">{final ? 'No archived tasks' : 'Drag card here'}</span>
+          <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white/60 px-4 py-10">
+            <span className="text-sm text-gray-300">{final ? 'No archived' : 'Drop here'}</span>
+            <span className="mt-1 text-xs text-gray-400">{final ? 'Completed tasks appear here' : 'Drag to move'}</span>
           </div>
         )}
       </div>
@@ -194,40 +205,42 @@ function CloseTaskModal({ task, status, onClose }: {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-        <div className="modal-pop relative w-full max-w-md rounded-xl bg-white shadow-2xl">
-          <div className="border-b border-gray-100 px-5 py-4">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-              <Archive className="h-4.5 w-4.5 text-emerald-600" />
-              Archive Task → {STATUS_LABEL[status]}
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="modal-pop relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
+          <div className="border-b border-gray-100 px-6 py-4">
+            <h2 className="flex items-center gap-2.5 text-base font-semibold text-gray-900">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <Archive className="h-4 w-4" />
+              </span>
+              Archive → {STATUS_LABEL[status]}
             </h2>
           </div>
-          <div className="space-y-3 px-5 py-4">
-            <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
-              <span className="font-medium text-gray-800">{task.title}</span>
+          <div className="space-y-4 px-6 py-5">
+            <p className="rounded-xl bg-gray-50 px-4 py-3 text-sm leading-relaxed text-gray-600">
+              <span className="font-semibold text-gray-900">{task.title}</span>
               <br />
-              After archiving, the task enters its final state and its status can no longer be changed.
+              <span className="text-xs text-gray-500">Will be moved to final state and become read-only.</span>
             </p>
             <textarea
               value={result}
               onChange={e => setResult(e.target.value)}
               rows={4}
               autoFocus
-              placeholder="Enter archive conclusion / completion report (Markdown, optional)..."
-              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              placeholder="Archive conclusion / result (Markdown, optional)..."
+              className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm placeholder-gray-400 focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
             />
             {error && (
-              <p className="flex items-center gap-1.5 text-sm text-red-600">
+              <p className="flex items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
                 <AlertTriangle className="h-4 w-4" />{error}
               </p>
             )}
           </div>
-          <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-3.5">
-            <button onClick={onClose} className="btn-secondary px-4 py-1.5 text-sm">Cancel</button>
+          <div className="flex justify-end gap-2 bg-gray-50/70 px-6 py-4">
+            <button onClick={onClose} className="btn-secondary px-5 py-2 text-sm">Cancel</button>
             <button
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
-              className="btn-primary inline-flex items-center gap-1.5 px-4 py-1.5 text-sm"
+              className="btn-primary inline-flex items-center gap-1.5 px-5 py-2 text-sm shadow-sm"
             >
               {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Confirm Archive
@@ -254,23 +267,23 @@ function DeleteTaskModal({ task, onClose }: { task: Task | null; onClose: () => 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-        <div className="modal-pop relative w-full max-w-sm rounded-xl bg-white shadow-2xl">
-          <div className="space-y-3 px-5 py-5 text-center">
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-red-50">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="modal-pop relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
+          <div className="px-6 pb-4 pt-6 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900">Delete this task?</h2>
-            <p className="break-all text-sm text-gray-500">
-              "{task.title}" will be permanently deleted and cannot be recovered.
+            <h2 className="mt-4 text-base font-semibold text-gray-900">Delete this task?</h2>
+            <p className="mt-1 break-all text-sm leading-relaxed text-gray-500">
+              "{task.title}" will be permanently deleted.
             </p>
           </div>
-          <div className="flex justify-center gap-2 border-t border-gray-100 px-5 py-3.5">
-            <button onClick={onClose} className="btn-secondary px-5 py-1.5 text-sm">Cancel</button>
+          <div className="flex justify-center gap-2 bg-gray-50/70 px-6 py-4">
+            <button onClick={onClose} className="btn-secondary px-5 py-2 text-sm">Cancel</button>
             <button
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
-              className="btn-danger inline-flex items-center gap-1.5 px-5 py-1.5 text-sm"
+              className="btn-danger inline-flex items-center gap-1.5 px-5 py-2 text-sm"
             >
               {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Delete Permanently
@@ -282,14 +295,13 @@ function DeleteTaskModal({ task, onClose }: { task: Task | null; onClose: () => 
   )
 }
 
-/* ─────────────── Main Page ─────────────── */
+/* ─────────────── Main Page — beautified ─────────────── */
 
 interface AgentOption { id: string; display_name: string }
 
 export function TaskCenter() {
   const qc = useQueryClient()
 
-  // Data
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', 'board'],
     queryFn: () => tasksApi.list({ page_size: 200 }),
@@ -304,7 +316,6 @@ export function TaskCenter() {
   const allTasks = useMemo(() => data?.items ?? [], [data])
   const agents: AgentOption[] = (agentsData?.items ?? []).filter(a => a.is_active)
 
-  // Filters
   const [keyword, setKeyword] = useState('')
   const [agentFilter, setAgentFilter] = useState('')
   const [projectFilter, setProjectFilter] = useState('')
@@ -340,14 +351,12 @@ export function TaskCenter() {
     ALL_STATUSES.map(s => ({ status: s, items: filtered.filter(t => t.status === s) })),
   [filtered])
 
-  // Modal / drawer state
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
   const [drawerTask, setDrawerTask] = useState<Task | null>(null)
   const [closing, setClosing] = useState<{ task: Task; status: TaskStatus } | null>(null)
   const [deleting, setDeleting] = useState<Task | null>(null)
 
-  // Drag
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null)
 
@@ -356,7 +365,6 @@ export function TaskCenter() {
     setDropTarget(null)
   }
 
-  // Status change mutation (optimistic update)
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       tasksApi.update(id, { status }),
@@ -376,36 +384,57 @@ export function TaskCenter() {
     const task = allTasks.find(t => t.id === draggingId)
     setDraggingId(null)
     if (!task || task.status === target) return
-    if (isFinal(target)) return openArchive(task, target) // Drag to final → open archive modal
+    if (isFinal(target)) return openArchive(task, target)
     updateStatus.mutate({ id: task.id, status: target })
   }
 
   const hasActiveFilter = agentFilter || projectFilter || keyword
 
   return (
-    <div className="-m-4 lg:-m-8">
-      {/* ─── Header ─── */}
-      <div className="sticky top-16 z-20 border-b border-gray-200 bg-gray-50/95 px-4 pb-3 pt-5 backdrop-blur lg:px-8">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative mr-auto">
+    <div className="mx-auto max-w-7xl">
+      {/* Header — title + actions */}
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-gray-900">Tasks</h1>
+              <p className="text-sm text-gray-500">{filtered.length} total · {counts['进行中'] ?? 0} in progress</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setEditing(null); setFormOpen(true) }}
+            className="btn-primary inline-flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="h-4 w-4" />New Task
+          </button>
+        </div>
+
+        {/* Filters bar — single clean row */}
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
-              placeholder="Search title, details, tags, result..."
-              className="w-56 rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-8 text-sm shadow-sm placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+              placeholder="Search title, details, tags..."
+              className="w-full rounded-full border-0 bg-gray-50 py-2 pl-9 pr-8 text-sm placeholder-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-900"
             />
             {keyword && (
-              <button onClick={() => setKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-white hover:text-gray-600">
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
+          <div className="h-6 w-px bg-gray-100 max-sm:hidden" />
+
           <select
             value={agentFilter}
             onChange={e => setAgentFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 shadow-sm focus:border-primary-400 focus:outline-none"
+            className="rounded-full border-0 bg-gray-50 px-3.5 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-1 focus:ring-gray-900"
           >
             <option value="">All Agents</option>
             {agents.map(a => <option key={a.id} value={a.id}>{a.display_name}</option>)}
@@ -414,38 +443,38 @@ export function TaskCenter() {
           <select
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 shadow-sm focus:border-primary-400 focus:outline-none"
+            className="rounded-full border-0 bg-gray-50 px-3.5 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-1 focus:ring-gray-900"
           >
             <option value="">All Projects</option>
             {projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
 
-          {/* View toggle */}
-          <div className="ml-auto flex rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
-            {([['kanban', LayoutGrid, 'Board'], ['table', Table2, 'Table']] as const).map(([v, Icon, label]) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={clsx(
-                  'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                  view === v ? 'bg-primary-600 text-white' : 'text-gray-500 hover:text-gray-800',
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />{label}
-              </button>
-            ))}
-          </div>
+          {hasActiveFilter && (
+            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter('') }} className="text-sm text-gray-500 hover:text-gray-700">
+              Clear
+            </button>
+          )}
 
-          <button
-            onClick={() => { setEditing(null); setFormOpen(true) }}
-            className="btn-primary inline-flex items-center gap-1.5 !py-1.5 text-sm shadow-sm"
-          >
-            <Plus className="h-4 w-4" />New Task
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex rounded-full bg-gray-100 p-1">
+              {([['kanban', LayoutGrid, 'Board'], ['table', Table2, 'Table']] as const).map(([v, Icon, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={clsx(
+                    'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
+                    view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />{label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* ─── Stats Bar ─── */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {/* Status pills — segmented, light */}
+        <div className="flex flex-wrap items-center gap-2">
           {(['全部', ...ALL_STATUSES] as const).map(s => {
             const active = statusPill === s
             const label = s === '全部' ? 'All' : STATUS_LABEL[s as TaskStatus]
@@ -458,66 +487,62 @@ export function TaskCenter() {
                   setStatusPill(active ? '全部' : s as TaskStatus)
                 }}
                 className={clsx(
-                  'inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all',
+                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
                   s === '全部'
-                    ? clsx(
-                        'bg-gray-900 text-white',
-                        statusPill !== '全部' && 'opacity-70 hover:opacity-100',
-                      )
+                    ? clsx(active ? 'bg-gray-900 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50')
                     : active
-                      ? 'bg-primary-600 text-white shadow-sm'
-                      : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:ring-primary-300',
+                      ? 'bg-gray-900 text-white shadow-sm'
+                      : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
                 )}
               >
                 {s !== '全部' && <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_BAR[s as TaskStatus])} />}
                 {label}
-                <span className={clsx('tabular-nums', active || s === '全部' ? 'opacity-80' : 'text-gray-400')}>
+                <span className={clsx('rounded-full px-1.5 py-0 text-[11px]', active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')}>
                   {counts[s]}
                 </span>
               </button>
             )
           })}
           {statusPill !== '全部' && (
-            <button
-              onClick={() => setStatusPill('全部')}
-              className="ml-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-1 text-xs text-gray-400 hover:text-gray-700"
-            >
+            <button onClick={() => setStatusPill('全部')} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-500 ring-1 ring-gray-200 hover:bg-gray-50">
               <X className="h-3 w-3" />Clear
             </button>
           )}
         </div>
       </div>
 
-      {/* ─── Content ─── */}
+      {/* Content */}
       {isLoading ? (
         <div className="flex h-64 items-center justify-center gap-2 text-gray-400">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span className="text-sm">Loading tasks...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex h-72 flex-col items-center justify-center gap-3">
-          <Inbox className="h-12 w-12 text-gray-200" />
+        <div className="flex h-[40vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-white py-16">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
+            <Inbox className="h-7 w-7" />
+          </div>
           <div className="text-center">
-            <p className="font-medium text-gray-700">
+            <p className="font-semibold text-gray-900">
               {hasActiveFilter || (view === 'table' && statusPill !== '全部') ? 'No matching tasks' : 'No tasks yet'}
             </p>
-            <p className="mt-1 text-sm text-gray-400">
-              {hasActiveFilter ? 'Try adjusting filters' : 'Click "New Task" at the top right to create the first task'}
+            <p className="mt-1 text-sm text-gray-500">
+              {hasActiveFilter ? 'Try adjusting filters' : 'Create the first task to get started'}
             </p>
           </div>
-          {hasActiveFilter && (
-            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter(''); setStatusPill('全部') }} className="btn-secondary px-4 py-1.5 text-sm">
+          {hasActiveFilter ? (
+            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter(''); setStatusPill('全部') }} className="btn-secondary px-5 py-2 text-sm">
               Clear Filters
+            </button>
+          ) : (
+            <button onClick={() => { setEditing(null); setFormOpen(true) }} className="btn-primary gap-1.5 px-5 py-2 text-sm">
+              <Plus className="h-4 w-4" />New Task
             </button>
           )}
         </div>
       ) : view === 'kanban' ? (
-        /* Kanban view */
-        <div className="scrollbar-thin overflow-x-auto px-4 py-4 lg:px-8">
-          <div
-            className="flex gap-3"
-            onDragOver={e => e.preventDefault()}
-          >
+        <div className="scrollbar-thin -mx-4 overflow-x-auto px-4 pb-4">
+          <div className="flex gap-4" onDragOver={e => e.preventDefault()}>
             {grouped.map(({ status, items }) => (
               <div
                 key={status}
@@ -545,101 +570,103 @@ export function TaskCenter() {
           </div>
         </div>
       ) : (
-        /* Table view */
-        <div className="px-4 py-4 lg:px-8">
-          <div className="card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Title</th>
-                    <th className="px-4 py-3">Agent</th>
-                    <th className="px-4 py-3">Project / Tags</th>
-                    <th className="px-4 py-3">Updated</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map(task => {
-                    const Icon = STATUS_ICON[task.status]
-                    const final = isFinal(task.status)
-                    return (
-                      <tr key={task.id} className="group cursor-pointer transition-colors hover:bg-gray-50/80" onClick={() => setDrawerTask(task)}>
-                        <td className="px-4 py-2.5">
-                          <span className={clsx(
-                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1',
-                            STATUS_COLOR[task.status],
-                          )}>
-                            <Icon className="h-3 w-3" />{STATUS_LABEL[task.status]}
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50/80 backdrop-blur">
+                <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-4 py-3.5">Title</th>
+                  <th className="px-4 py-3.5">Agent</th>
+                  <th className="px-4 py-3.5">Project / Tags</th>
+                  <th className="px-4 py-3.5">Updated</th>
+                  <th className="px-4 py-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map(task => {
+                  const Icon = STATUS_ICON[task.status]
+                  const final = isFinal(task.status)
+                  return (
+                    <tr key={task.id} className="group cursor-pointer transition-colors hover:bg-gray-50" onClick={() => setDrawerTask(task)}>
+                      <td className="px-5 py-3">
+                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1', STATUS_COLOR[task.status])}>
+                          <Icon className="h-3 w-3" />{STATUS_LABEL[task.status]}
+                        </span>
+                      </td>
+                      <td className="max-w-[360px] px-4 py-3">
+                        <div className={clsx('truncate font-semibold text-gray-900', final && 'line-through decoration-gray-300')} title={task.title}>
+                          {task.title}
+                        </div>
+                        {task.detail && <div className="truncate text-xs text-gray-500">{task.detail.slice(0, 80)}</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600">
+                            {(task.agent_name || '?').slice(0, 1).toUpperCase()}
                           </span>
-                        </td>
-                        <td className="max-w-xs px-4 py-2.5">
-                          <div className={clsx('truncate font-medium text-gray-900', final && 'line-through decoration-gray-300')} title={task.title}>
-                            {task.title}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-600">{task.agent_name || '-'}</td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex flex-wrap items-center gap-1">
-                            {task.project && (
-                              <span className="inline-flex items-center gap-0.5 rounded bg-primary-50 px-1.5 py-0.5 text-[11px] text-primary-700">
-                                <FolderKanban className="h-2.5 w-2.5" />{task.project}
-                              </span>
-                            )}
-                            {task.tags.slice(0, 2).map(tag => (
-                              <span key={tag} className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-500">{tag}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-2.5 text-gray-500">
-                          {format(new Date(task.updated_at), 'MM-dd HH:mm')}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
-                            {!final && (
-                              <>
-                                <select
-                                  value=""
-                                  onChange={e => {
-                                    const v = e.target.value as TaskStatus
-                                    if (!v) return
-                                    if (isFinal(v)) openArchive(task, v)
-                                    else updateStatus.mutate({ id: task.id, status: v })
-                                  }}
-                                  className="cursor-pointer rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-600 hover:border-gray-300"
-                                >
-                                  <option value="">Move to ▸</option>
-                                  {ACTIVE_STATUSES.filter(s => s !== task.status).map(s => (
-                                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                                  ))}
-                                  <option value="完成">Archive as Done</option>
-                                  <option value="废弃">Archive as Abandoned</option>
-                                </select>
-                                <button title="Edit" onClick={() => { setEditing(task); setFormOpen(true) }} className="rounded p-1.5 text-gray-500 hover:bg-gray-100">
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            )}
-                            <button title="Delete" onClick={() => setDeleting(task)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t border-gray-100 px-4 py-2.5 text-xs text-gray-400">
-              {filtered.length} tasks total
-            </div>
+                          {task.agent_name || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {task.project && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-2 py-1 text-xs font-medium text-white">
+                              <FolderKanban className="h-3 w-3 opacity-70" />{task.project}
+                            </span>
+                          )}
+                          {task.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-200">{tag}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
+                        {format(new Date(task.updated_at), 'MM/dd HH:mm')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
+                          {!final && (
+                            <>
+                              <select
+                                value=""
+                                onChange={e => {
+                                  const v = e.target.value as TaskStatus
+                                  if (!v) return
+                                  if (isFinal(v)) openArchive(task, v)
+                                  else updateStatus.mutate({ id: task.id, status: v })
+                                }}
+                                className="cursor-pointer rounded-full border-0 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-white hover:ring-1 hover:ring-gray-200"
+                              >
+                                <option value="">Move ▸</option>
+                                {ALL_STATUSES.filter(s => s !== task.status && !isFinal(s)).map(s => (
+                                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                                ))}
+                                <option value="完成">→ Done</option>
+                                <option value="废弃">→ Abandoned</option>
+                              </select>
+                              <button title="Edit" onClick={() => { setEditing(task); setFormOpen(true) }} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-50">
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                          <button title="Delete" onClick={() => setDeleting(task)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-400 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-3 text-xs text-gray-500">
+            {filtered.length} tasks
           </div>
         </div>
       )}
 
-      {/* ─── Modals ─── */}
+      {/* Modals */}
       <TaskFormModal
         open={formOpen}
         task={editing}

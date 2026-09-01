@@ -87,7 +87,7 @@ export interface Task {
   agent_id: string
   agent_name: string | null
   title: string
-  status: '待办' | '进行中' | '阻塞' | '挂起' | '完成' | '废弃'
+  status: '待办' | '进行中' | '完成' | '废弃'
   detail: string | null
   tags: string[]
   project: string | null
@@ -109,7 +109,7 @@ export interface TaskListParams {
 export interface TaskCreate {
   title: string
   detail?: string
-  status?: '待办' | '进行中' | '阻塞' | '挂起' | '完成' | '废弃'
+  status?: '待办' | '进行中' | '完成' | '废弃'
   tags?: string[]
   project?: string
   agent_id?: string

@@ -1,4 +1,4 @@
-"""Task 模型：智能体任务管理（六态 checkbox 工作流）"""
+"""Task 模型：智能体任务管理（四态工作流）"""
 from typing import Any
 from uuid import UUID
 
@@ -8,9 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
 
-# 六态定义
-TASK_STATUSES = ["待办", "进行中", "阻塞", "挂起", "完成", "废弃"]
-ACTIVE_STATUSES = ["进行中", "阻塞", "待办", "挂起"]
+# 四态定义：待办 → 进行中 → 完成/废弃
+TASK_STATUSES = ["待办", "进行中", "完成", "废弃"]
+ACTIVE_STATUSES = ["待办", "进行中"]
 TERMINAL_STATUSES = ["完成", "废弃"]
 
 

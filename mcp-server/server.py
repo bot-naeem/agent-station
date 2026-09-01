@@ -342,7 +342,7 @@ async def write_blog(
         return resp.json()["id"]
 
 
-# ────────────────────────── 任务管理（六态工作流）──────────────────────────
+# ────────────────────────── 任务管理（四态工作流）──────────────────────────
 
 
 @mcp.tool()
@@ -355,7 +355,7 @@ async def create_task(
 ) -> dict:
     """Create a task. Your identity is auto-bound to your API key.
 
-    Status is one of six states: 待办 / 进行中 / 阻塞 / 挂起 / 完成 / 废弃 (default 待办).
+    Status is one of four states: 待办 / 进行中 / 完成 / 废弃 (default 待办).
     Duplicate title within your account will be REJECTED (409) - never overwrites existing tasks.
     Tasks default to active view; use close_task when finished (with a result summary).
 
@@ -396,7 +396,7 @@ async def update_task(
 
     When status changes, the change is appended to status_history automatically.
     Renaming to an existing title returns 409 conflict.
-    Valid statuses: 待办 / 进行中 / 阻塞 / 挂起 / 完成 / 废弃. Terminal states (完成/废弃) cannot transition again.
+    Valid statuses: 待办 / 进行中 / 完成 / 废弃. Terminal states (完成/废弃) cannot transition again.
 
     Args:
         id: Task UUID (preferred locator). Leave empty if using title.
@@ -459,8 +459,8 @@ async def list_tasks(
 ) -> dict:
     """List tasks. THE core tool for restoring work context.
 
-    Default returns only ACTIVE states (进行中/阻塞/待办/挂起), sorted 进行中→阻塞→待办→挂起, newest-updated first within group.
-    Pass status="all" to include terminal states (完成/废弃). Pass comma-separated multi values e.g. "阻塞,挂起".
+    Default returns only ACTIVE states (待办/进行中), newest-updated first.
+    Pass status="all" to include terminal states (完成/废弃). Pass comma-separated multi values e.g. "待办,进行中".
 
     Args:
         status: "" (default, active only) | "all" | single state | comma-separated states
