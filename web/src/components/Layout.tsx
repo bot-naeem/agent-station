@@ -313,12 +313,7 @@ export function Layout() {
 
       {/* Main content */}
       <div className="lg:pl-[220px]">
-        <header className="sticky top-0 z-30 flex h-[60px] items-center border-b border-gray-100 bg-white/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:px-6">
-          <h1 className="pl-10 text-sm font-medium tracking-tight text-gray-900 lg:pl-0">
-            {navigation.find((n) => location.pathname === n.href || location.pathname.startsWith(n.href + '/'))?.name || 'Agent Station'}
-          </h1>
-        </header>
-        <main className="px-4 py-6 lg:px-6">
+        <main className="px-4 pb-6 pt-14 lg:p-6">
           <Outlet />
         </main>
       </div>
