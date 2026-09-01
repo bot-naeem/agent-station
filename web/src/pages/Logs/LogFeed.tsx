@@ -1,11 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
-import { Loader2, Clock, CalendarDays, Inbox, Tag as TagIcon, Pencil, Check, Search } from 'lucide-react'
+import { useQueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { Loader2, Clock, CalendarDays, Inbox, Tag as TagIcon, Check, Search, Eye, X, Copy, FileText } from 'lucide-react'
 import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { markdownApi, type MarkdownLog } from '../../services/api'
+import { MarkdownViewer } from '../../components/MarkdownViewer'
 import { clsx } from 'clsx'
-import { useNavigate } from '@tanstack/react-router'
 
 const PAGE_SIZE = 20
 
@@ -69,14 +69,17 @@ function groupByDate(items: MarkdownLog[]) {
   return groups
 }
 
-function LogCard({ log, onEdit }: { log: MarkdownLog; onEdit: (l: MarkdownLog) => void }) {
+function LogCard({ log, onView }: { log: MarkdownLog; onView: (l: MarkdownLog) => void }) {
   const name = displayName(log)
   const tags = (log.front_matter?.tags as string[] | undefined) ?? []
   const title = log.title || log.file_path.split('/').pop()?.replace('.md', '') || 'Untitled'
   const summary = log.summary?.trim() ?? ''
 
   return (
-    <article className="group relative flex gap-4 bg-white px-5 py-5 transition-colors hover:bg-gray-50/60">
+    <article
+      onClick={() => onView(log)}
+      className="group relative flex cursor-pointer gap-4 bg-white px-5 py-5 transition-colors hover:bg-gray-50/80"
+    >
       {/* timeline rail */}
       <div className="relative flex shrink-0 flex-col items-center">
         <div className={clsx('flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-sm ring-4 ring-white', gradientFor(name))}>
@@ -91,12 +94,9 @@ function LogCard({ log, onEdit }: { log: MarkdownLog; onEdit: (l: MarkdownLog) =
           <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white">{log.agent_type}</span>
           <span className="text-xs text-gray-400">·</span>
           <time className="text-xs text-gray-400" title={log.log_date}>{timeAgo(log.created_at)}</time>
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(log) }}
-            className="ml-auto hidden items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-900 hover:text-white group-hover:inline-flex md:inline-flex md:opacity-0 md:group-hover:opacity-100 transition"
-          >
-            <Pencil className="h-3 w-3" /> Edit
-          </button>
+          <span className="ml-auto hidden items-center gap-1 rounded-full bg-gray-900 px-2.5 py-1 text-xs font-medium text-white shadow-sm group-hover:inline-flex md:inline-flex md:opacity-0 md:group-hover:opacity-100 transition">
+            <Eye className="h-3 w-3" /> Preview
+          </span>
         </div>
 
         <h3 className="mt-2 line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 group-hover:text-gray-900">
@@ -138,9 +138,157 @@ function LogCard({ log, onEdit }: { log: MarkdownLog; onEdit: (l: MarkdownLog) =
   )
 }
 
+function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  const { data: log, isLoading, isError } = useQuery({
+    queryKey: ['markdown-log', logId],
+    queryFn: () => markdownApi.get(logId!),
+    enabled: !!logId,
+  })
+
+  useEffect(() => {
+    if (!logId) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [logId, onClose])
+
+  const handleCopy = async () => {
+    if (!log?.content) return
+    try {
+      await navigator.clipboard.writeText(log.content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
+  }
+
+  if (!logId) return null
+
+  const name = log ? displayName(log) : ''
+  const title = log ? (log.title || log.file_path.split('/').pop()?.replace('.md', '') || 'Untitled') : ''
+  const tags = (log?.front_matter?.tags as string[] | undefined) ?? []
+  const createdLabel = log ? format(new Date(log.created_at), 'MMM dd, yyyy · HH:mm', { locale: enUS }) : ''
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
+        {/* Hero */}
+        <div className="relative shrink-0">
+          <div className={clsx('h-28 bg-gradient-to-br', log ? gradientFor(name) : 'from-gray-800 to-gray-900')} />
+          <button
+            onClick={onClose}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur hover:bg-white/25"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="absolute inset-x-0 bottom-0 translate-y-1/2 px-6">
+            <div className="flex items-end gap-4">
+              <div className={clsx('flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-bold text-white shadow-lg ring-4 ring-white', log ? gradientFor(name) : 'from-gray-700 to-gray-800')}>
+                {log ? initials(name) : '…'}
+              </div>
+              <div className="min-w-0 flex-1 pb-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200">{log?.agent_type ?? '—'}</span>
+                  <span className="hidden text-xs text-white/80 sm:inline">· {createdLabel}</span>
+                </div>
+                <h2 className="mt-1 truncate text-base font-bold text-gray-900 drop-shadow-none sm:text-white sm:drop-shadow" style={{ textShadow: log ? '0 1px 6px rgba(0,0,0,0.15)' : undefined }}>{log ? title : 'Loading…'}</h2>
+              </div>
+              <button
+                onClick={handleCopy}
+                disabled={!log?.content}
+                className="mb-1 hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-40 sm:inline-flex"
+              >
+                {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy Markdown</>}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-10 scrollbar-thin sm:px-8 sm:pt-12">
+          {isLoading ? (
+            <div className="space-y-4 py-10">
+              <div className="h-5 w-2/3 animate-pulse rounded bg-gray-100" />
+              <div className="h-4 w-full animate-pulse rounded bg-gray-50" />
+              <div className="h-4 w-5/6 animate-pulse rounded bg-gray-50" />
+            </div>
+          ) : isError || !log ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-red-600">Failed to load log</p>
+              <button onClick={onClose} className="mt-3 btn-secondary text-sm">Close</button>
+            </div>
+          ) : (
+            <>
+              {/* Meta bar */}
+              <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4 text-xs">
+                <span className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+                  <FileText className="h-3.5 w-3.5 text-gray-400" />
+                  {log.file_path}
+                </span>
+                <span className="text-gray-300">·</span>
+                <span className="inline-flex items-center gap-1 text-gray-500">
+                  <CalendarDays className="h-3.5 w-3.5" /> {fmtFullDate(log.log_date)}
+                </span>
+                {!!log.tokens_estimate && log.tokens_estimate > 0 && (
+                  <>
+                    <span className="text-gray-300">·</span>
+                    <span className="inline-flex items-center gap-1 text-gray-500">
+                      <Clock className="h-3.5 w-3.5" /> {log.tokens_estimate >= 1000 ? `${(log.tokens_estimate/1000).toFixed(1)}k` : log.tokens_estimate} tokens
+                    </span>
+                  </>
+                )}
+                <span className="ml-auto inline-flex items-center gap-1.5 sm:hidden">
+                  <button onClick={handleCopy} className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white">
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
+                  </button>
+                </span>
+              </div>
+
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div className="mb-6 flex flex-wrap gap-1.5">
+                  {tags.map(t => (
+                    <span key={t} className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-2.5 py-1 text-xs font-medium text-white">
+                      <TagIcon className="h-3 w-3 opacity-60" /> {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary callout */}
+              {log.summary && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3.5">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">Summary</div>
+                  <p className="mt-1 text-sm leading-relaxed text-amber-900">{log.summary}</p>
+                </div>
+              )}
+
+              {/* Markdown */}
+              <MarkdownViewer content={log.content || ''} />
+
+              {/* Footer */}
+              <div className="mt-10 flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-400">
+                <span>Agent: {displayName(log)} · {log.agent_type}</span>
+                <span>{log.front_matter ? Object.keys(log.front_matter).length + ' meta fields' : ''}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 export function LogFeed() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [filterTag, setFilterTag] = useState<string | undefined>(undefined)
   const [query, setQuery] = useState('')
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -282,7 +430,7 @@ export function LogFeed() {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {group.items.map((log) => (
-                    <LogCard key={log.id} log={log} onEdit={(l) => navigate({ to: '/logs/editor/$logId', params: { logId: l.id } })} />
+                    <LogCard key={log.id} log={log} onView={(l) => setPreviewId(l.id)} />
                   ))}
                 </div>
               </div>
@@ -303,6 +451,8 @@ export function LogFeed() {
       </div>
 
       <p className="mt-6 text-center text-xs text-gray-400">Scroll to load more · Full-text search and tag filtering supported</p>
+
+      <LogPreviewModal logId={previewId} onClose={() => setPreviewId(null)} />
     </div>
   )
 }
