@@ -27,7 +27,7 @@ function TaskCard({
   const final = isFinal(task.status)
   return (
     <div
-      draggable={!final}
+      draggable
       onDragStart={e => {
         e.dataTransfer.setData('text/plain', task.id)
         e.dataTransfer.effectAllowed = 'move'
@@ -138,7 +138,6 @@ function KanbanColumn({
   const final = isFinal(status)
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (final) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
@@ -146,10 +145,10 @@ function KanbanColumn({
   return (
     <div
       onDragOver={handleDragOver}
-      onDrop={e => { if (!final) { e.preventDefault(); onDropColumn(status) } }}
+      onDrop={e => { e.preventDefault(); onDropColumn(status) }}
       className={clsx(
         'flex w-[300px] shrink-0 flex-col rounded-2xl border bg-white shadow-sm transition-all',
-        isDropTarget && !final ? 'border-primary-300 bg-primary-50/50 shadow-md' : 'border-gray-100',
+        isDropTarget ? 'border-primary-300 bg-primary-50/50 shadow-md' : 'border-gray-100',
       )}
     >
       {/* Column header */}
@@ -541,12 +540,12 @@ export function TaskCenter() {
           )}
         </div>
       ) : view === 'kanban' ? (
-        <div className="scrollbar-thin -mx-4 overflow-x-auto px-4 pb-4">
+        <div className="-mx-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex gap-4" onDragOver={e => e.preventDefault()}>
             {grouped.map(({ status, items }) => (
               <div
                 key={status}
-                onDragEnter={() => !isFinal(status) && setDropTarget(status)}
+                onDragEnter={() => setDropTarget(status)}
                 onDragLeave={e => {
                   const el = e.currentTarget as HTMLElement
                   if (!el.contains(e.relatedTarget as Node)) setDropTarget(prev => prev === status ? null : prev)
