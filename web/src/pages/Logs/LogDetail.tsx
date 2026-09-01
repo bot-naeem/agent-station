@@ -1,7 +1,7 @@
 import { useParams, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, CalendarDays, Tag as TagIcon, Clock, Copy, Check, FileText, Hash } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { markdownApi } from '../../services/api'
 import { MarkdownViewer } from '../../components/MarkdownViewer'
@@ -58,7 +58,7 @@ export function LogDetail() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <div className="h-28 animate-pulse rounded-2xl bg-gray-100" />
+        <div className="h-1.5 animate-pulse rounded-full bg-gray-100" />
         <div className="mt-6 space-y-3">
           <div className="h-6 w-2/3 animate-pulse rounded bg-gray-100" />
           <div className="h-4 w-full animate-pulse rounded bg-gray-50" />
@@ -93,41 +93,38 @@ export function LogDetail() {
         <ArrowLeft className="h-4 w-4" /> Back to feed
       </Link>
 
-      {/* Hero */}
+      {/* Article card - thin accent, no overlapping hero */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-900/5">
-        <div className={clsx('relative h-28 bg-gradient-to-br', gradientFor(name))}>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
-        </div>
-        <div className="relative px-6 pb-6">
-          <div className="flex items-end gap-4 -mt-10">
-            <div className={clsx('flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-bold text-white shadow-lg ring-4 ring-white', gradientFor(name))}>
+        <div className={clsx('h-1.5 w-full bg-gradient-to-r', gradientFor(name))} />
+        <div className="px-6 pb-6 pt-6 sm:px-8 sm:pt-7">
+          <div className="flex gap-4">
+            <div className={clsx('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-bold text-white shadow-sm', gradientFor(name))}>
               {initials(name)}
             </div>
-            <div className="min-w-0 flex-1 pb-1">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-gray-900 px-2.5 py-1 text-xs font-medium text-white">{log.agent_type}</span>
-                <span className="text-sm font-medium text-gray-700">{name}</span>
-                <span className="text-xs text-gray-400">· {format(new Date(log.created_at), 'MMM dd, yyyy · HH:mm', { locale: enUS })}</span>
+                <span className="text-sm font-semibold text-gray-900">{name}</span>
+                <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white">{log.agent_type}</span>
+                <span className="hidden text-xs text-gray-400 sm:inline">· {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: enUS })}</span>
+                <button
+                  onClick={handleCopy}
+                  className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 sm:inline-flex"
+                >
+                  {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy Markdown</>}
+                </button>
               </div>
-              <h1 className="mt-1 line-clamp-2 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">{title}</h1>
+              <h1 className="mt-1.5 text-xl font-bold leading-tight tracking-tight text-gray-900 sm:text-2xl">{title}</h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-500 sm:hidden">
+                <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: enUS })}</span>
+              </div>
             </div>
-            <button
-              onClick={handleCopy}
-              className="mb-1 hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 sm:inline-flex"
-            >
-              {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy Markdown</>}
-            </button>
           </div>
 
-          {/* Meta bar */}
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-y border-gray-100 py-3 text-xs">
-            <span className="inline-flex items-center gap-1.5 font-mono text-gray-500">
+          {/* Meta bar - single line, no duplicate date */}
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-y border-gray-100 py-3 text-xs">
+            <span className="inline-flex items-center gap-1.5 font-mono text-xs text-gray-500">
               <FileText className="h-3.5 w-3.5 text-gray-400" />
               {log.file_path}
-            </span>
-            <span className="text-gray-300">·</span>
-            <span className="inline-flex items-center gap-1 text-gray-500">
-              <CalendarDays className="h-3.5 w-3.5" /> {format(new Date(log.log_date), 'MMM dd, yyyy', { locale: enUS })}
             </span>
             {!!log.tokens_estimate && log.tokens_estimate > 0 && (
               <>
@@ -137,6 +134,9 @@ export function LogDetail() {
                 </span>
               </>
             )}
+            <span className="inline-flex items-center gap-1 text-gray-500">
+              <CalendarDays className="h-3.5 w-3.5" /> {format(new Date(log.log_date), 'MMM dd, yyyy', { locale: enUS })}
+            </span>
             <button onClick={handleCopy} className="ml-auto inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white sm:hidden">
               {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
             </button>

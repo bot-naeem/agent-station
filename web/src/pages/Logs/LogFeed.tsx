@@ -178,40 +178,18 @@ function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: ()
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-        {/* Hero */}
-        <div className="relative shrink-0">
-          <div className={clsx('h-28 bg-gradient-to-br', log ? gradientFor(name) : 'from-gray-800 to-gray-900')} />
-          <button
-            onClick={onClose}
-            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur hover:bg-white/25"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <div className="absolute inset-x-0 bottom-0 translate-y-1/2 px-6">
-            <div className="flex items-end gap-4">
-              <div className={clsx('flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-base font-bold text-white shadow-lg ring-4 ring-white', log ? gradientFor(name) : 'from-gray-700 to-gray-800')}>
-                {log ? initials(name) : '…'}
-              </div>
-              <div className="min-w-0 flex-1 pb-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200">{log?.agent_type ?? '—'}</span>
-                  <span className="hidden text-xs text-white/80 sm:inline">· {createdLabel}</span>
-                </div>
-                <h2 className="mt-1 truncate text-base font-bold text-gray-900 drop-shadow-none sm:text-white sm:drop-shadow" style={{ textShadow: log ? '0 1px 6px rgba(0,0,0,0.15)' : undefined }}>{log ? title : 'Loading…'}</h2>
-              </div>
-              <button
-                onClick={handleCopy}
-                disabled={!log?.content}
-                className="mb-1 hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-40 sm:inline-flex"
-              >
-                {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy Markdown</>}
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Thin gradient accent */}
+        <div className={clsx('h-1.5 w-full bg-gradient-to-r', log ? gradientFor(name) : 'from-gray-800 to-gray-900')} />
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6 pt-10 scrollbar-thin sm:px-8 sm:pt-12">
+        {/* Scrollable content - single scroll, no overlapping hero */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="px-6 pb-6 pt-6 sm:px-8 sm:pt-7">
           {isLoading ? (
             <div className="space-y-4 py-10">
               <div className="h-5 w-2/3 animate-pulse rounded bg-gray-100" />
@@ -225,15 +203,38 @@ function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: ()
             </div>
           ) : (
             <>
+              {/* Header: avatar + title */}
+              <div className="flex gap-4">
+                <div className={clsx('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-bold text-white shadow-sm', log ? gradientFor(name) : 'from-gray-700 to-gray-800')}>
+                  {log ? initials(name) : '…'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{log ? name : 'Loading…'}</span>
+                    <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium tracking-wide text-white">{log?.agent_type ?? '—'}</span>
+                    <span className="hidden text-xs text-gray-400 sm:inline">· {createdLabel}</span>
+                    <button
+                      onClick={handleCopy}
+                      disabled={!log?.content}
+                      className="ml-auto hidden shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-40 sm:inline-flex"
+                    >
+                      {copied ? <><Check className="h-3.5 w-3.5 text-emerald-500" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy Markdown</>}
+                    </button>
+                  </div>
+                  <h2 className="mt-1.5 text-xl font-bold leading-tight tracking-tight text-gray-900">{log ? title : 'Loading…'}</h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{log ? timeAgo(log.created_at) : ''}</span>
+                    <span className="text-gray-300">·</span>
+                    <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{log ? fmtFullDate(log.log_date) : ''}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Meta bar */}
-              <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-gray-100 pb-4 text-xs">
-                <span className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-y border-gray-100 py-3 text-xs">
+                <span className="inline-flex items-center gap-1.5 font-mono text-xs text-gray-500">
                   <FileText className="h-3.5 w-3.5 text-gray-400" />
                   {log.file_path}
-                </span>
-                <span className="text-gray-300">·</span>
-                <span className="inline-flex items-center gap-1 text-gray-500">
-                  <CalendarDays className="h-3.5 w-3.5" /> {fmtFullDate(log.log_date)}
                 </span>
                 {!!log.tokens_estimate && log.tokens_estimate > 0 && (
                   <>
@@ -281,6 +282,7 @@ function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: ()
           )}
         </div>
       </div>
+    </div>
     </div>
   )
 }
