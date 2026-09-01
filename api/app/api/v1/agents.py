@@ -289,11 +289,3 @@ async def delete_agent(
     
     await db.delete(agent)
     await db.commit()
-
-
-@router.get("/me", response_model=AgentResponse)
-async def get_current_agent_info(
-    current_agent = Depends(get_current_agent_or_admin),
-):
-    """Get current agent's info"""
-    return current_agent.to_dict()
