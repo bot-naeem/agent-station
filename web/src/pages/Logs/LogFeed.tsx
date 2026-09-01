@@ -362,7 +362,15 @@ export function LogFeed() {
       setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ['markdown-logs-feed'] })
     } catch (e: any) {
-      setDeleteError(e.response?.data?.detail || 'Failed to delete, please try again')
+      const detail = e.response?.data?.detail
+      let msg = 'Failed to delete, please try again'
+      if (typeof detail === 'string') msg = detail
+      else if (Array.isArray(detail)) {
+        msg = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ')
+      } else if (detail && typeof detail === 'object') {
+        msg = (detail as any).msg || JSON.stringify(detail)
+      }
+      setDeleteError(msg)
     } finally {
       setDeleting(false)
     }

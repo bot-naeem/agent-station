@@ -315,7 +315,7 @@ async def update_markdown_log(
 async def delete_markdown_log(
     markdown_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_agent = Depends(require_write_access()),
+    current_agent = Depends(get_current_agent_or_admin),
 ):
     """Delete a markdown log (only own logs or admin)"""
     service = MarkdownService(db)
