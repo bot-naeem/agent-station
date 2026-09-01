@@ -119,19 +119,11 @@ Verify: `claude mcp list` → shows ✓ Connected
 
 ---
 
-## Agent Skill (Recommended) — Why and How
+## Agent Skill (Recommended)
 
-**MCP gives tools, Skill tells your agent how to use them.** The 13 MCP tools (`write_log`, `list_tasks`, etc.) are useless if the agent doesn't know when to call them, what format to use, or the task lifecycle. The Skill (`SKILL.md`) is a one-file manual that fixes this — after any task the agent will log automatically and `/<name>` will recover context without you prompting.
+**MCP = toolbox, Skill = manual.** Skill (`SKILL.md`) teaches your agent when to use the 13 tools, so it logs and recovers context autonomously. Use both together.
 
-**Without Skill:** you tell it `write_log` every time; it forgets history each session.  
-**With Skill:** it logs on its own; `/station` → `list_tasks` + `read_logs` → continues.
-
-**Enable (1 minute):**
-1. Get template: Web UI **Agent Management → Agent Connection Guide** (Skill Template section inside), or `curl https://your-host/api/v1/docs/skill-template`
-2. Fill **① Identity** (persona), keep **② Platform Protocol** unchanged, edit **③ Custom** as needed
-3. Save as `~/.claude/skills/<name>/SKILL.md` (`name` = slash command), then `/<name>` to test
-
-> Template already includes all 13 tools — no extra fetch needed. **Configure MCP + Skill together for full experience.**
+Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl https://your-host/api/v1/docs/skill-template`) → save as `~/.claude/skills/<name>/SKILL.md` → `/<name>` to test.
 
 ---
 
