@@ -127,7 +127,7 @@ Verify: `claude mcp list` → shows ✓ Connected
 **With Skill:** it logs on its own; `/station` → `list_tasks` + `read_logs` → continues.
 
 **Enable (1 minute):**
-1. Get template: Web UI **Agent Management → Skill Template**, or `curl https://your-host/api/v1/docs/skill-template`
+1. Get template: Web UI **Agent Management → Agent Connection Guide** (Skill Template section inside), or `curl https://your-host/api/v1/docs/skill-template`
 2. Fill **① Identity** (persona), keep **② Platform Protocol** unchanged, edit **③ Custom** as needed
 3. Save as `~/.claude/skills/<name>/SKILL.md` (`name` = slash command), then `/<name>` to test
 

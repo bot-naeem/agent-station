@@ -155,102 +155,30 @@ function CopyBlock({ code, label }: { code: string; label?: string }) {
 }
 
 
-/* ---------------------------- Skill Template Modal ---------------------------- */
+/* ---------------------------- MCP Guide Modal (includes Skill Template) ---------------------------- */
 
-function SkillTemplateModal({ onClose }: { onClose: () => void }) {
- const [content, setContent] = useState('')
- const [loading, setLoading] = useState(true)
- const [error, setError] = useState('')
- const [copied, setCopied] = useState(false)
+function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose: () => void }) {
+ const [skillContent, setSkillContent] = useState('')
+ const [skillLoading, setSkillLoading] = useState(true)
+ const [skillError, setSkillError] = useState('')
+ const [skillCopied, setSkillCopied] = useState(false)
 
  useEffect(() => {
   fetch(SKILL_TEMPLATE_URL)
    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.text() })
-   .then(setContent)
-   .catch(() => setError('Failed to load template, please try again later'))
-   .finally(() => setLoading(false))
+   .then(setSkillContent)
+   .catch(() => setSkillError('Failed to load template'))
+   .finally(() => setSkillLoading(false))
  }, [])
 
- const copyAll = async () => {
-  if (!content) return
+ const copySkillAll = async () => {
+  if (!skillContent) return
   try {
-   await navigator.clipboard.writeText(content)
-   setCopied(true)
-   setTimeout(() => setCopied(false), 2000)
+   await navigator.clipboard.writeText(skillContent)
+   setSkillCopied(true)
+   setTimeout(() => setSkillCopied(false), 2000)
   } catch { /* ignore */ }
  }
-
- return (
-  <Modal onClose={onClose} wide>
-   <ModalHeader
-    icon={<GraduationCap className="h-5 w-5" />}
-    title="Agent Skill Template"
-    desc="Three-section structure: 1. Persona 2. Platform Rules (do not edit) 3. Custom. Fill and save as ~/.claude/skills/<name>/SKILL.md"
-    onClose={onClose}
-   />
-
-   <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 py-4 scrollbar-thin">
-    {/* How to Get */}
-    <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-3.5">
-     <p className="mb-2 text-xs leading-relaxed text-violet-800">
-      Have your local agent <b>web-fetch</b> the URL below to get the full template, or copy the full text on the right:
-     </p>
-     <CopyBlock code={SKILL_TEMPLATE_URL} />
-    </div>
-
-    {/* Full Template */}
-    <div className="relative">
-     <div className="mb-1.5 flex items-center justify-between">
-      <span className="text-xs font-medium text-gray-500">Full Template (Markdown)</span>
-      <button
-       onClick={copyAll}
-       disabled={loading || !content}
-       className={clsx(
-        'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-        copied ? 'bg-emerald-50 text-emerald-600' : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40',
-       )}
-      >
-       {copied ? <><Check className="h-3.5 w-3.5" />Copied</> : <><CopyIcon className="h-3.5 w-3.5" />Copy All</>}
-      </button>
-     </div>
-
-     {loading ? (
-      <div className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-16 text-sm text-gray-400">
-       <Loader2 className="h-4 w-4 animate-spin" />
-       Loading template...
-      </div>
-     ) : error ? (
-      <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-8 text-center text-sm text-red-600">{error}</div>
-     ) : (
-      <pre className="max-h-[46vh] overflow-auto rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words text-gray-100 scrollbar-thin select-all">
-{content}
-      </pre>
-     )}
-    </div>
-
-    {/* Usage Tips */}
-    <div className="rounded-xl border border-gray-200 p-3.5">
-     <h4 className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-gray-900">
-      <Info className="h-4 w-4 text-gray-400" />Usage Steps
-     </h4>
-     <ol className="list-decimal space-y-0.5 pl-5 text-xs leading-relaxed text-gray-600">
-      <li>Copy the full text and save as <code className="rounded bg-gray-100 px-1 font-mono">~/.claude/skills/&lt;name&gt;/SKILL.md</code></li>
-      <li>Fill section 1 (Persona) and 3 (Custom) — leave section 2 (Platform Rules) unchanged</li>
-      <li>Ensure MCP is connected locally, then in the session <code className="rounded bg-gray-100 px-1 font-mono">/&lt;name&gt;</code> to test</li>
-     </ol>
-    </div>
-   </div>
-
-   <div className="flex items-center justify-end rounded-b-2xl border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-    <button onClick={onClose} className="btn-secondary min-w-[88px]">Close</button>
-   </div>
-  </Modal>
- )
-}
-
-/* ---------------------------- MCP Guide Modal ---------------------------- */
-
-function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose: () => void }) {
  const keyHint = 'sk-as-xxxxxxxxxxxx'
  const addCommand = `claude mcp add agent-station --transport sse \\\n "${MCP_SSE_URL}?api_key=${keyHint}"`
 
@@ -259,7 +187,7 @@ function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose:
    <ModalHeader
     icon={<BookOpen className="h-5 w-5" />}
     title={agent ? `Guide · ${agent.display_name}` : 'Agent Connection Guide'}
-    desc="Copy the commands below to your agent to connect to the platform"
+    desc="Connect via MCP and enable the Skill so your agent logs and manages tasks automatically"
     onClose={onClose}
    />
 
@@ -411,6 +339,58 @@ If you are using Antigravity CLI (agy), edit ~/.gemini/config/mcp_config.json an
      <CopyBlock code={DOCS_URL} />
     </section>
 
+    {/* Agent Skill Template (merged) */}
+    <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4">
+     <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-violet-900">
+      <GraduationCap className="h-4 w-4" />
+      Agent Skill Template <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Recommended</span>
+     </h4>
+     <p className="mb-3 text-xs leading-relaxed text-violet-800/80">
+      <b>MCP gives tools, Skill tells your agent how to use them.</b> Without Skill you must prompt <code className="rounded bg-violet-100 px-1 font-mono">write_log</code> every time; with Skill the agent logs automatically and <code className="rounded bg-violet-100 px-1 font-mono">/&lt;name&gt;</code> restores context via <code className="rounded bg-violet-100 px-1 font-mono">list_tasks</code> + <code className="rounded bg-violet-100 px-1 font-mono">read_logs</code>.
+     </p>
+     <div className="mb-3 rounded-lg border border-violet-200 bg-white p-3">
+      <p className="mb-2 text-xs font-medium text-violet-900">Have your local agent web-fetch the URL below (or copy full text on the right):</p>
+      <CopyBlock code={SKILL_TEMPLATE_URL} />
+     </div>
+     <div className="relative mb-3">
+      <div className="mb-1.5 flex items-center justify-between">
+       <span className="text-xs font-medium text-gray-500">Full Template (Markdown)</span>
+       <button
+        onClick={copySkillAll}
+        disabled={skillLoading || !skillContent}
+        className={clsx(
+         'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+         skillCopied ? 'bg-emerald-50 text-emerald-600' : 'bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40',
+        )}
+       >
+        {skillCopied ? <><Check className="h-3.5 w-3.5" />Copied</> : <><CopyIcon className="h-3.5 w-3.5" />Copy All</>}
+       </button>
+      </div>
+      {skillLoading ? (
+       <div className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-10 text-sm text-gray-400">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading template...
+       </div>
+      ) : skillError ? (
+       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-600">{skillError}</div>
+      ) : (
+       <pre className="max-h-[36vh] overflow-auto rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words text-gray-100 scrollbar-thin select-all">
+{skillContent}
+       </pre>
+      )}
+     </div>
+     <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <h5 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-900">
+       <Info className="h-4 w-4 text-gray-400" />Usage Steps
+      </h5>
+      <ol className="list-decimal space-y-0.5 pl-5 text-xs leading-relaxed text-gray-600">
+       <li>Copy the full text and save as <code className="rounded bg-gray-100 px-1 font-mono">~/.claude/skills/&lt;name&gt;/SKILL.md</code></li>
+       <li>Fill section 1 (Persona) and 3 (Custom) — leave section 2 (Platform Rules) unchanged</li>
+       <li>Ensure MCP is connected, then in session <code className="rounded bg-gray-100 px-1 font-mono">/&lt;name&gt;</code> to test</li>
+      </ol>
+     </div>
+    </section>
+
     {/* FAQ */}
     <section>
      <h4 className="mb-2 text-sm font-semibold text-gray-900">FAQ</h4>
@@ -457,7 +437,6 @@ export function Agents() {
  const [keyDialog, setKeyDialog] = useState<{ agentName: string; key: string } | null>(null)
  const [copied, setCopied] = useState(false)
  const [guide, setGuide] = useState<{ open: boolean; agent: AgentResponse | null }>({ open: false, agent: null })
- const [skillOpen, setSkillOpen] = useState(false)
 
  /* ------------------------------ Data Loading ------------------------------ */
 
@@ -644,16 +623,12 @@ export function Agents() {
       <p className="text-sm text-gray-500">Manage Agent accounts, API Keys and access permissions for the platform</p>
      </div>
     </div>
-    <div className="flex items-center gap-2 self-start sm:self-auto">
-     <button onClick={() => setGuide({ open: true, agent: null })} className="btn-secondary">
-      <BookOpen className="mr-1.5 h-4 w-4" />
-      Guide
-     </button>
-     <button onClick={() => setSkillOpen(true)} className="btn-secondary">
-      <GraduationCap className="mr-1.5 h-4 w-4" />
-      Skill Template
-     </button>
-     <button onClick={openCreate} className="btn-primary shadow-sm shadow-primary-500/25">
+     <div className="flex items-center gap-2 self-start sm:self-auto">
+      <button onClick={() => setGuide({ open: true, agent: null })} className="btn-secondary">
+       <BookOpen className="mr-1.5 h-4 w-4" />
+       Agent Connection Guide
+      </button>
+      <button onClick={openCreate} className="btn-primary shadow-sm shadow-primary-500/25">
       <Plus className="mr-1.5 h-4 w-4" />
       New Agent
      </button>
@@ -1105,8 +1080,6 @@ export function Agents() {
     <GuideModal agent={guide.agent} onClose={() => setGuide({ open: false, agent: null })} />
    )}
 
-   {/* ------------------------- Skill Template Modal ------------------------- */}
-   {skillOpen && <SkillTemplateModal onClose={() => setSkillOpen(false)} />}
   </div>
  )
 }
