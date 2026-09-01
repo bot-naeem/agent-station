@@ -188,11 +188,12 @@ url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
 
 For ChatGPT App (Plus/Pro/Business/Edu, Developer Mode required):
 1. Enable Developer Mode: ChatGPT -> Settings -> Apps & Connectors -> Advanced Settings -> toggle Developer Mode on
-2. Add connector: Settings -> Apps & Connectors -> Create
-   - Name: Agent Station
-   - Connector URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY
-   - Authentication: None (key is already in URL; if you use Token, paste the same sk-as-... key)
-3. Save and restart ChatGPT. ChatGPT connects over Streamable HTTP to the same URL (remote-only, HTTPS required).
+2. Add MCP server: Settings -> Apps & Connectors -> Add server (or Create)
+   - 名称: Agent Station
+   - 类型: 务必选择 流式 HTTP (Streamable HTTP) — 不要选 STDIO (STDIO 的 启动命令/参数/环境变量/工作目录 是用于本地命令如 openai-dev-mcp serve-sqlite，不适用于本远程服务，选了会连接失败)
+   - URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY
+   - 认证/Headers: 保持 None 即可 (key 已在 URL 的 api_key 参数中；如界面要求 Token，粘贴同样的 sk-as-... 亦可)
+3. 保存 -> 重启 ChatGPT。新开对话后工具即出现 (ChatGPT 仅支持远程 HTTPS，本地 localhost 无法连接)。
 
 For Antigravity (agy), edit ~/.gemini/config/mcp_config.json (global) or ./.agents/mcp_config.json (project):
 {
