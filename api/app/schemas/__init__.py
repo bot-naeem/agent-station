@@ -31,16 +31,6 @@ from app.schemas.agent import (
     AgentCreate as AgentCreateSchema,
     AgentUpdate as AgentUpdateSchema,
 )
-from app.schemas.blog import (
-    BlogPostFrontMatter,
-    BlogPostCreate,
-    BlogPostUpdate,
-    BlogPostResponse,
-    BlogPostListResponse,
-    BlogPostDetailResponse,
-    BlogPostSearchParams,
-    BlogPostStatsResponse,
-)
 
 __all__ = [
     "BaseSchema",
@@ -66,12 +56,4 @@ __all__ = [
     "AgentPermissionUpdate",
     "AgentResponse",
     "AgentListResponse",
-    "BlogPostFrontMatter",
-    "BlogPostCreate",
-    "BlogPostUpdate",
-    "BlogPostResponse",
-    "BlogPostListResponse",
-    "BlogPostDetailResponse",
-    "BlogPostSearchParams",
-    "BlogPostStatsResponse",
 ]

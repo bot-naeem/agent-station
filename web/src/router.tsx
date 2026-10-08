@@ -5,7 +5,6 @@ import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
 import { Agents } from './pages/Agents'
 import { Login } from './pages/Login'
-import { BlogsList, BlogDetail, BlogEditor } from './pages/Blogs'
 import { TaskCenter } from './pages/Tasks'
 import { Layout } from './components/Layout'
 import { AuthLayout } from './components/AuthLayout'
@@ -44,30 +43,6 @@ const agentsRoute = createRoute({
   component: Agents,
 })
 
-const blogsListRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/blog',
-  component: BlogsList,
-})
-
-const blogDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/blog/$slug',
-  component: BlogDetail,
-})
-
-const blogEditorRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/blog/editor/$blogId',
-  component: BlogEditor,
-})
-
-const blogEditorNewRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/blog/editor/new',
-  component: BlogEditor,
-})
-
 const taskCenterRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks',
@@ -86,10 +61,6 @@ const routeTree = rootRoute.addChildren([
   logEditorRoute,
   logDetailRoute,
   agentsRoute,
-  blogsListRoute,
-  blogDetailRoute,
-  blogEditorRoute,
-  blogEditorNewRoute,
   taskCenterRoute,
   loginRoute,
 ])

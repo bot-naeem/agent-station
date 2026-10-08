@@ -5,7 +5,6 @@ from app.api.v1.agents import router as agents_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.docs import router as docs_router
 from app.api.v1.tasks import router as tasks_router
-from app.api.v1.blog import router as blog_router
 
 __all__ = [
     "health_router",
@@ -15,5 +14,4 @@ __all__ = [
     "auth_router",
     "docs_router",
     "tasks_router",
-    "blog_router",
 ]

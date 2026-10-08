@@ -190,6 +190,9 @@ export const agentApi = {
   rotateKey: async (id: string) =>
     (await api.post<AgentResponse>(`/agents/${id}/rotate-key`)).data,
 
+  revealKey: async (id: string) =>
+    (await api.get<AgentResponse>(`/agents/${id}/key`)).data,
+
   delete: async (id: string) => {
     await api.delete(`/agents/${id}`)
   },
@@ -225,41 +228,6 @@ export interface AgentUpdate {
   permissions?: string[]
   readable_agent_ids?: string[]
   is_active?: boolean
-}
-
-export interface BlogPost {
-  id: string
-  agent_id: string
-  agent_name: string | null
-  title: string
-  slug: string
-  summary: string | null
-  cover_image: string | null
-  status: 'draft' | 'published' | 'archived'
-  category: string | null
-  tags: string[]
-  published_at: string | null
-  created_at: string
-  updated_at: string
-  content?: string
-  front_matter?: Record<string, any>
-}
-
-export interface BlogPostListResponse {
-  items: BlogPost[]
-  total: number
-  page: number
-  page_size: number
-  total_pages: number
-}
-
-export interface BlogStats {
-  total_posts: number
-  published_posts: number
-  draft_posts: number
-  by_category: Record<string, number>
-  by_agent: Record<string, number>
-  top_tags: Array<{ tag: string; count: number }>
 }
 
 export interface LoginRequest {
@@ -313,52 +281,5 @@ export const tasksApi = {
 
   delete: async (id: string) => {
     await api.delete(`/tasks/${id}`)
-  },
-}
-
-export const blogApi = {
-  create: async (data: {
-    title: string
-    slug?: string
-    summary?: string
-    cover_image?: string
-    category?: string
-    tags?: string[]
-    status?: 'draft' | 'published' | 'archived'
-    content: string
-  }) =>
-    (await api.post<BlogPost>('/blog', data)).data,
-
-  list: async (params: {
-    page?: number
-    page_size?: number
-    category?: string
-    tag?: string
-    status?: 'draft' | 'published' | 'archived'
-    query?: string
-    agent_name?: string
-  }) =>
-    (await api.get<BlogPostListResponse>('/blog', { params })).data,
-
-  stats: async () =>
-    (await api.get<BlogStats>('/blog/stats')).data,
-
-  get: async (identifier: string) =>
-    (await api.get<BlogPost>(`/blog/${identifier}`)).data,
-
-  update: async (id: string, data: Partial<{
-    title: string
-    slug: string
-    summary: string
-    cover_image: string
-    category: string
-    tags: string[]
-    status: 'draft' | 'published' | 'archived'
-    content: string
-  }>) =>
-    (await api.put<BlogPost>(`/blog/${id}`, data)).data,
-
-  delete: async (id: string) => {
-    await api.delete(`/blog/${id}`)
   },
 }

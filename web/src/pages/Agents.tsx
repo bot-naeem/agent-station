@@ -4,7 +4,7 @@ import { agentApi, authApi, type AgentResponse, type AgentCreate } from '../serv
 import { clsx } from 'clsx'
 import {
  ShieldCheck, Plus, Search, Bot, Activity, Clock,
- Pencil, KeyRound, Trash2, X, AlertTriangle, Copy, Check,
+ Pencil, KeyRound, Trash2, Eye, X, AlertTriangle, Copy, Check,
  Loader2, Ban, Fingerprint, Info, BookOpen, Terminal, Plug, Wrench,
  GraduationCap, Copy as CopyIcon,
 } from 'lucide-react'
@@ -158,14 +158,20 @@ function CopyBlock({ code, label }: { code: string; label?: string }) {
 /* ---------------------------- MCP Guide Modal (includes Skill Template) ---------------------------- */
 
 function GuideModal({ agent, onClose }: { agent?: AgentResponse | null; onClose: () => void }) {
+ const [realKey, setRealKey] = useState<string | null>(null)
+ useEffect(() => {
+  if (!agent) { setRealKey(null); return }
+  agentApi.revealKey(agent.id).then(r => setRealKey(r.api_key || null)).catch(() => setRealKey(null))
+ }, [agent])
+ const keyForSnippet = realKey || 'YOUR_API_KEY'
  const mcpSnippet = `Please connect to the Agent Station platform.
 
 Platform: Agent Station
-URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY  (replace YOUR_API_KEY with the real sk-as-... key, shown once at creation)
+URL: ${MCP_SSE_URL}?api_key=${keyForSnippet}  (replace YOUR_API_KEY with the real sk-as-... key, shown once at creation)
 Transport: SSE (Claude Code/OpenCode/Cline/Codex) / Streamable HTTP (Antigravity/ChatGPT)
 
 For Claude Code, run:
-claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+claude mcp add agent-station --transport sse "${MCP_SSE_URL}?api_key=${keyForSnippet}"
 Then verify: claude mcp list  ->  agent-station ... ✓ Connected
 
 For OpenCode, edit ~/.config/opencode/opencode.json:
@@ -173,7 +179,7 @@ For OpenCode, edit ~/.config/opencode/opencode.json:
   "mcp": {
     "agent-station": {
       "type": "remote",
-      "url": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+      "url": "${MCP_SSE_URL}?api_key=${keyForSnippet}"
     }
   }
 }
@@ -181,8 +187,8 @@ Restart OpenCode.
 
 For Codex CLI (also used by ChatGPT desktop app), edit ~/.codex/config.toml (create if not exists):
 [mcp_servers.agent-station]
-url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-# Alternative CLI: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+url = "${MCP_SSE_URL}?api_key=${keyForSnippet}"
+# Alternative CLI: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=${keyForSnippet}"
 # Verify: codex mcp list
 # Note: Codex and ChatGPT desktop app share ~/.codex/config.toml — one config works for both.
 
@@ -190,16 +196,16 @@ For ChatGPT App (Plus/Pro/Business/Edu): Let the agent edit the config file dire
 File: ~/.codex/config.toml (shared by Codex CLI and ChatGPT desktop app; create if not exists)
 Add:
 [mcp_servers.agent-station]
-url = "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
-# Or run: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=YOUR_API_KEY" && codex mcp list
+url = "${MCP_SSE_URL}?api_key=${keyForSnippet}"
+# Or run: codex mcp add agent-station --url "${MCP_SSE_URL}?api_key=${keyForSnippet}" && codex mcp list
 Then restart ChatGPT (new chat). Verify via codex mcp list or check the file contains the table.
-# If you must use the UI form: Settings -> Apps & Connectors -> Advanced Settings -> enable Developer Mode -> Add server -> 名称: Agent Station, 类型: 选 流式 HTTP (不要 STDIO), URL: ${MCP_SSE_URL}?api_key=YOUR_API_KEY, 认证: None, 保存 -> 重启 (STDIO 的 启动命令/参数/环境变量 是本地模式，不适用于本远程服务).
+# If you must use the UI form: Settings -> Apps & Connectors -> Advanced Settings -> enable Developer Mode -> Add server -> 名称: Agent Station, 类型: 选 流式 HTTP (不要 STDIO), URL: ${MCP_SSE_URL}?api_key=${keyForSnippet}, 认证: None, 保存 -> 重启 (STDIO 的 启动命令/参数/环境变量 是本地模式，不适用于本远程服务).
 
 For Antigravity (agy), edit ~/.gemini/config/mcp_config.json (global) or ./.agents/mcp_config.json (project):
 {
   "mcpServers": {
     "agent-station": {
-      "serverUrl": "${MCP_SSE_URL}?api_key=YOUR_API_KEY"
+      "serverUrl": "${MCP_SSE_URL}?api_key=${keyForSnippet}"
     }
   }
 }
@@ -207,10 +213,10 @@ Start a new agy session (server supports dual protocol: same URL works for SSE a
 
 After connected, after each important task call write_log(title + content Markdown with Background/Steps/Result/Pitfalls, tags with YYYY-MM-DD), and use read_logs / search_logs to review history.`
 
- const skillSnippet = `Please install the Agent Station Skill (so you know when/how to use the 13 MCP tools).
+ const skillSnippet = `Please install the Agent Station Skill (so you know when/how to use the 12 MCP tools).
 
 1. web-fetch ${SKILL_TEMPLATE_URL}
-2. Fill section ① Identity (Name, Vibe, Creature...) and ③ Custom (your playbooks); keep ② Platform Protocol unchanged — it already contains all 13 tools
+2. Fill section ① Identity (Name, Vibe, Creature...) and ③ Custom (your playbooks); keep ② Platform Protocol unchanged — it already contains all 12 tools
 3. Save as ~/.claude/skills/<name>/SKILL.md  (choose a short name, frontmatter "name" = slash command like /<name>)
 4. Verify: claude mcp list shows agent-station ✓ Connected, then /<name> — the skill will auto-call list_tasks + read_logs to recover context and enter standby.`
 
@@ -230,7 +236,7 @@ After connected, after each important task call write_log(title + content Markdo
       <h4 className="text-sm font-semibold text-gray-900">Snippet 1 — MCP Connection</h4>
       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">send to agent first</span>
      </div>
-     <p className="mb-2 text-xs leading-relaxed text-gray-500">Replace <code className="rounded bg-gray-100 px-1 font-mono">YOUR_API_KEY</code> with the real key for <b>{agent ? agent.display_name : 'this agent'}</b> before sending. Key is shown once at creation; if lost, rotate it in the list.</p>
+     <p className="mb-2 text-xs leading-relaxed text-gray-500">Replace <code className="rounded bg-gray-100 px-1 font-mono">YOUR_API_KEY</code> with the real key for <b>{agent ? agent.display_name : 'this agent'}</b> before sending. {realKey ? <span className="text-emerald-600 font-medium">· Real key pre-filled for this agent</span> : null} Key is shown once at creation; if lost, rotate it in the list.</p>
      <CopyBlock code={mcpSnippet} />
     </section>
 
@@ -395,7 +401,23 @@ export function Agents() {
   }
  }
 
- const handleDelete = async () => {
+ const handleView = async (a: AgentResponse) => {
+   setConfirmError('')
+   try {
+    const res = await agentApi.revealKey(a.id)
+    if (res.api_key) setKeyDialog({ agentName: res.display_name || res.name, key: res.api_key })
+   } catch (e: any) {
+    const detail = e.response?.data?.detail
+    let msg = 'Failed to view key, please rotate to generate a viewable key'
+    if (typeof detail === 'string') msg = detail
+    else if (Array.isArray(detail)) msg = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('; ')
+    else if (detail && typeof detail === 'object') msg = (detail as any).msg || JSON.stringify(detail)
+    setConfirmError(msg)
+    setError(msg)
+   }
+  }
+
+  const handleDelete = async () => {
   if (!deleteTarget) return
   setSubmitting(true)
   setConfirmError('')
@@ -468,10 +490,6 @@ export function Agents() {
      </div>
     </div>
      <div className="flex items-center gap-2 self-start sm:self-auto">
-      <button onClick={() => setGuide({ open: true, agent: null })} className="btn-secondary">
-       <BookOpen className="mr-1.5 h-4 w-4" />
-       Agent Connection Guide
-      </button>
       <button onClick={openCreate} className="btn-primary shadow-sm shadow-primary-500/25">
       <Plus className="mr-1.5 h-4 w-4" />
       New Agent
@@ -632,6 +650,9 @@ export function Agents() {
             </button>
             <button onClick={() => setGuide({ open: true, agent: a })} title="Guide" className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-violet-50 hover:text-violet-600">
              <BookOpen className="h-4 w-4" />
+            </button>
+            <button onClick={() => handleView(a)} title="View API Key" className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600">
+             <Eye className="h-4 w-4" />
             </button>
             <button onClick={() => { setConfirmError(''); setRotateTarget(a) }} title="Rotate API Key" className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-amber-50 hover:text-amber-600">
              <KeyRound className="h-4 w-4" />

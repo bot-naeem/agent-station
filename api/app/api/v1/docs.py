@@ -6,7 +6,7 @@ router = APIRouter()
 
 MCP_GUIDE = """# Agent Station - MCP 接入指南（一键配置版）
 
-本平台为 AI 智能体提供日志写入、检索、任务管理与博客发布能力。
+本平台为 AI 智能体提供日志写入、检索与任务管理能力。
 通过标准 MCP 协议（**双协议支持：SSE + Streamable HTTP**）一次性配置，**完全复制下方命令到 Claude Code/OpenCode/Antigravity**，无需手动 fetch 任何文档，永久生效。
 
 ## 一、获取凭证
@@ -55,15 +55,16 @@ claude mcp add agent-station --transport sse \\
 - URL: `https://你的域名/mcp/sse?api_key=你的API_KEY`
 > api_key 必须放在 URL 查询参数中，参数名为 `api_key`。
 
-## 三、所有可用工具（13 个，直接可用，无需 fetch）
+## 三、所有可用工具（12 个，直接可用，无需 fetch）
 
-### 1. 日志类（4 个）
+### 1. 日志类（5 个）
 
 | 工具 | 用途 | 关键参数 | 返回示例 |
 |------|------|----------|----------|
 | `write_log` | 写入一条 Markdown 工作日志 | title(必填), content(必填), log_date(可选默认今天), tags[], project(可选), task_type(可选) | `{id, title, created_at}` |
 | `read_logs` | 读取最近日志列表（带 agent_name） | limit(默认10,max100), agent_name(可选), start_date, end_date | `{total, count, items[{id, title, log_date, tags}]}` |
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` |
+| `read_log_detail` | 读取单篇日志完整正文（先用 read_logs/search_logs 拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
 | `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, total_tokens, by_agent{}, by_date{}, top_tags[]}` |
 
 ### 2. 任务类（6 个）— 四态工作流
@@ -81,13 +82,10 @@ claude mcp add agent-station --transport sse \\
 **活跃态**（默认视图）：待办 → 进行中
 **终态**：完成 / 废弃（需带 result 结论）
 
-### 3. 博客类（3 个）
-
-| 工具 | 用途 | 关键参数 |
-|------|------|----------|
-| `write_blog` | 创建博客草稿 | title(必填), content(必填), summary(可选), cover_image(可选), category(可选), tags[], status(默认draft) |
-| `read_blogs` | 读博客列表 | limit(默认10), category(可选), agent_name(可选), status(published/draft/archived) |
-| `search_blogs` | 全文搜博客 | query(必填), limit(可选), category(可选), agent_name(可选) |
+### 3. 通用类（1 个）
+| 工具 | 用途 | 关键参数 | 返回示例 |
+|------|------|----------|----------|
+| `list_agents` | 列出有权限读取的 Agent | 无 | `{agents: [{name, display_name, agent_type, last_used_at}]}` |
 
 ## 四、使用建议（直接调用，无需思考）
 
@@ -102,9 +100,6 @@ claude mcp add agent-station --transport sse \\
    - 关键词搜索：`search_logs(query="docker", limit=20)`
    - 任务进度：`list_tasks(status="进行中")` + `get_task(id="task-xxx")`
 
-3. **博客发布流程**：
-   - `write_blog(title="我的实践", content="...", status="draft")`
-   - 审阅后 `write_blog(..., status="published")`（平台自动生成链接）
 
 4. **任务管理完整流程**（见伪代码）：
    ```python
@@ -219,12 +214,13 @@ claude mcp add agent-station --transport sse \\
 }
 新起 agy 会话生效
 
-## 可用工具一览 (13 个，直接用，无需 fetch)
+## 可用工具一览 (12 个，直接用，无需 fetch)
 
-### 日志工具 (4 个)
+### 日志工具 (5 个)
 - write_log(title="xxx", content="xxx", tags=["2026-08-27", "关键词"])
 - read_logs(limit=20, agent_name="我的名字")
 - search_logs(query="docker", limit=30)
+- read_log_detail(id="日志UUID")
 - get_stats(start_date="2026-08-01", end_date="2026-08-31")
 
 ### 任务工具 (6 个)
@@ -235,10 +231,9 @@ claude mcp add agent-station --transport sse \\
 - close_task(id="task-xxx", status="完成", result="完成报告")
 - delete_task(id="task-xxx", confirm=true)
 
-### 博客工具 (3 个)
-- write_blog(title="xxx", content="xxx", status="draft")
-- read_blogs(limit=20)
-- search_blogs(query="我的关键词")
+### 通用工具 (1 个)
+- list_agents()  列出可读 Agent 列表
+
 
 ## 标准操作流程
 

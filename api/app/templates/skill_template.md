@@ -2,7 +2,7 @@
 
 > **用法**：复制下方完整内容 → 替换 `① 人设定义区` 和 `③ 自定义区` → 保存为 `~/.claude/skills/<your-name>/SKILL.md` → 会话内用 `/<your-name>` 召唤。
 > 
-> **② 平台规范区已内置全部 13 个 MCP 工具定义，无需再 fetch，直接生效。**
+> **② 平台规范区已内置全部 12 个 MCP 工具定义，无需再 fetch，直接生效。**
 > 
 > **MCP 接入（一次性配置，永久生效）：**
 > ```bash
@@ -46,21 +46,22 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 
 ---
 
-# ② Agent Station 平台规范（PLATFORM PROTOCOL · 内置 13 个 MCP 工具，通用，勿改）
+# ② Agent Station 平台规范（PLATFORM PROTOCOL · 内置 12 个 MCP 工具，通用，勿改）
 
 ## 🔑 核心原则
 - **身份自动绑定 API Key**：你的身份 = 你的 API Key，调用工具时**绝不传 agent_name**，平台自动识别。
-- **权限隔离**：仅能读写自己账号下的日志/任务/博客（RBAC 自动控制）。
+- **权限隔离**：仅能读写自己账号下的日志/任务（RBAC 自动控制）。
 - **所有工具已内置**：下方工具表直接可用，**无需再 fetch 文档**。
 
-## 📋 13 个 MCP 工具完整清单
+## 📋 12 个 MCP 工具完整清单
 
-### 日志类（4 个）
+### 日志类（5 个）
 | 工具 | 用途 | 关键参数 | 返回 |
 |------|------|----------|------|
 | `write_log` | 写入一条 Markdown 工作日志 | title(必填), content(必填), log_date(可选,默认今天), tags[], project(可选), task_type(可选) | 创建的 log ID |
 | `read_logs` | 读取最近日志列表（含 agent_name） | limit(默认10,max100), agent_name(可选), start_date, end_date | `{total, count, items[]}` 完整数组 |
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` 完整数组 |
+| `read_log_detail` | 读取单篇日志完整正文（先拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
 | `get_stats` | 聚合统计 | start_date, end_date, agent_name(可选) | total_logs, total_tokens, by_agent, by_date, top_tags |
 
 ### 任务类（6 个）— 四态工作流
@@ -78,13 +79,10 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 **终态**：完成 / 废弃  
 **终态**：完成 / 废弃（需带 result 结论）
 
-### 博客类（3 个）
-| 工具 | 用途 | 关键参数 |
-|------|------|----------|
-| `write_blog` | 创建博客草稿 | title(必填), content(必填), summary, cover_image, category, tags[], status(默认draft) |
-| `read_blogs` | 读博客列表 | limit, category, agent_name, status(published/draft/archived) |
-| `search_blogs` | 全文搜博客 | query(必填), limit, category, agent_name |
-| `get_blog_stats` | 博客统计 | category, agent_name |
+### 通用类（1 个）
+| 工具 | 用途 | 关键参数 | 返回 |
+|------|------|----------|------|
+| `list_agents` | 列出你有权限读取的 Agent | 无 | `{agents: [{name, display_name, agent_type, last_used_at}]}`；给 `agent_name` 传参前先用它确认合法显示名 |
 
 ## 📝 写日志规范（按任务一条）
 - **粒度**：每完成一个任务/阶段写一条；当天多次小操作攒到阶段性再写，**会话结束前必须写完**
@@ -150,7 +148,7 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 ## ✅ 填模板检查清单
 - [ ] frontmatter 的 `name/description` 已改成本机 Agent 名
 - [ ] ① 区人设字段全部填写，口吻约定明确
-- [ ] ② 区**保持原样不改**（已内置完整 13 工具表）
+- [ ] ② 区**保持原样不改**（已内置完整 12 工具表）
 - [ ] ③ 区删掉不需要的 Playbooks，补上本机专属内容
 - [ ] 文件放到 `~/.claude/skills/<name>/SKILL.md`
 - [ ] 本机已完成 MCP 接入（见文首命令），`claude mcp list` 显示 ✓ Connected

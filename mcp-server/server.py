@@ -115,6 +115,7 @@ async def read_logs(
         end_date: Only logs on/before this date, "YYYY-MM-DD" (inclusive, UTC). Tip: to read ALL logs of ONE specific day, pass the SAME date as both start_date and end_date.
     Returns:
         {"total": N, "count": M, "items": [log objects]} - items is ALWAYS a complete JSON array (one entry per log: id, title, summary, agent_name, agent_type, log_date, file_path). Never truncated.
+        NOTE: items contain title + summary ONLY (no full body). Call read_log_detail(id) for the full Markdown content.
     """
     params: dict = {"page_size": max(1, min(limit, 100))}
     if agent_name.strip():
@@ -154,6 +155,7 @@ async def search_logs(
         end_date: Only logs on/before this date, "YYYY-MM-DD" (inclusive, UTC)
     Returns:
         {"total": N, "count": M, "items": [matching log objects]} - items is ALWAYS a complete JSON array, never truncated.
+        NOTE: items contain title + summary ONLY (no full body). Call read_log_detail(id) for the full Markdown content.
     """
     params: dict = {"query": query, "page_size": max(1, min(limit, 100))}
     if agent_name.strip():
@@ -168,6 +170,25 @@ async def search_logs(
         resp.raise_for_status()
         data = resp.json()
         return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
+
+
+@mcp.tool()
+async def read_log_detail(id: str) -> dict:
+    """Read ONE log's full Markdown body by its id (get the id from read_logs / search_logs first).
+
+    Args:
+        id: Log UUID (required), e.g. "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    Returns:
+        Full log object including content (complete Markdown body), title, summary,
+        agent_name, log_date, file_path, tags/project/task_type (front_matter).
+    """
+    if not id.strip():
+        raise ValueError("需要提供日志 id（从 read_logs / search_logs 的 items[].id 获取）")
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(f"{API_BASE}/markdown/{id.strip()}", headers=_get_headers())
+        resp.raise_for_status()
+        return resp.json()
 
 
 @mcp.tool()
@@ -195,93 +216,9 @@ async def get_stats(start_date: str = "", end_date: str = "", agent_name: str = 
         return resp.json()
 
 
-# ────────────────────────── 博客管理──────────────────────────
-
-@mcp.tool()
-async def read_blogs(
-    limit: int = 10,
-    category: str = "",
-    agent_name: str = "",
-    status: str = "published",
-) -> dict:
-    """Read blog posts, newest first.
-
-    Args:
-        limit: Max number of posts to return (default 10, max 100)
-        category: Filter by category, e.g. "技术"
-        agent_name: Exact agent display name to filter by, e.g. "Umayar"
-        status: Filter by status: "published" (default) | "draft" | "archived"
-    Returns:
-        {"total": N, "count": M, "items": [blog objects]} - items is ALWAYS a complete JSON array
-    """
-    params: dict = {"page_size": max(1, min(limit, 100)), "status": status}
-    if category.strip():
-        params["category"] = category.strip()
-    if agent_name.strip():
-        params["agent_name"] = agent_name.strip()
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{API_BASE}/blog", headers=_get_headers(), params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
-
-
-@mcp.tool()
-async def search_blogs(
-    query: str,
-    limit: int = 10,
-    category: str = "",
-    agent_name: str = "",
-) -> dict:
-    """Full-text keyword search across blog posts.
-
-    Args:
-        query: Keyword(s) to search, e.g. "docker" or "部署 教程"
-        limit: Max results (default 10)
-        category: Filter by category
-        agent_name: Exact agent name to filter by
-    Returns:
-        {"total": N, "count": M, "items": [matching blog objects]}
-    """
-    params: dict = {"query": query, "page_size": max(1, min(limit, 100))}
-    if category.strip():
-        params["category"] = category.strip()
-    if agent_name.strip():
-        params["agent_name"] = agent_name.strip()
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{API_BASE}/blog", headers=_get_headers(), params=params)
-        resp.raise_for_status()
-        data = resp.json()
-        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
-
-
-@mcp.tool()
-async def get_blog_stats(category: str = "", agent_name: str = "") -> dict:
-    """Get aggregated statistics of blog posts.
-
-    Args:
-        category: Optional category filter
-        agent_name: Optional exact agent name filter
-    Returns:
-        Stats object: total_posts, published_posts, draft_posts, by_category, by_agent, top_tags
-    """
-    params: dict = {}
-    if category.strip():
-        params["category"] = category.strip()
-    if agent_name.strip():
-        params["agent_name"] = agent_name.strip()
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{API_BASE}/blog/stats", headers=_get_headers(), params=params)
-        resp.raise_for_status()
-        return resp.json()
-
-
 @mcp.tool()
 async def list_agents() -> dict:
-    """List all accessible agents for filtering. Use this to get valid agent display_names before filtering logs/blogs.
+    """List all accessible agents for filtering. Use this to get valid agent display_names before filtering logs.
 
     Returns:
         {"agents": [{"name": "agent-name", "display_name": "显示名", "agent_type": "类型", "last_used_at": "ISO时间"}]} - only agents readable by current API key (based on permissions)
@@ -300,46 +237,6 @@ async def list_agents() -> dict:
             for a in data.get("items", [])
         ]
         return {"agents": agents}
-
-
-@mcp.tool()
-async def write_blog(
-    title: str,
-    content: str,
-    summary: str = "",
-    cover_image: str = "",
-    category: str = "",
-    tags: list[str] = [],
-    status: str = "draft",
-) -> str:
-    """Create a blog post. Your identity is auto-bound to your API key.
-
-    Args:
-        title: Blog post title (required), e.g. "Docker 部署实战指南"
-        content: Full blog body in Markdown (Chinese). Use structure: \
-## 背景\n为什么写这篇 \n## 正文\n详细内容 \n## 总结\n核心要点
-        summary: Optional short summary for list view, e.g. "从零开始的 Docker 部署教程"
-        cover_image: Optional cover image URL
-        category: Optional category, e.g. "技术", "教程", "随笔"
-        tags: 2-5 short keywords for retrieval, e.g. ["docker", "部署", "运维"]
-        status: "draft" (default) | "published" | "archived". Only admins can publish directly.
-    Returns:
-        The created blog post ID (UUID string)
-    """
-    body: dict = {"title": title, "content": content, "status": status}
-    if summary.strip():
-        body["summary"] = summary
-    if cover_image.strip():
-        body["cover_image"] = cover_image
-    if category.strip():
-        body["category"] = category
-    if tags:
-        body["tags"] = tags
-
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(f"{API_BASE}/blog", headers=_get_headers(), json=body)
-        resp.raise_for_status()
-        return resp.json()["id"]
 
 
 # ────────────────────────── 任务管理（四态工作流）──────────────────────────
@@ -598,8 +495,8 @@ _session_api_keys: dict[str, str] = {}
 
 
 async def handle_sse(request):
-    # Extract api_key from query params
-    api_key = request.query_params.get("api_key")
+    # Extract api_key from query params or X-API-Key header (parity with Streamable HTTP handler)
+    api_key = request.query_params.get("api_key") or request.headers.get("x-api-key")
     if not api_key:
         return JSONResponse({"error": "Missing api_key parameter"}, status_code=401)
 
