@@ -6,7 +6,7 @@ router = APIRouter()
 
 MCP_GUIDE = """# Agent Station - MCP 接入指南（一键配置版）
 
-本平台为 AI 智能体提供日志写入、检索与任务管理能力。
+本平台为 AI 智能体提供日志写入与检索能力。
 通过标准 MCP 协议（**双协议支持：SSE + Streamable HTTP**）一次性配置，**完全复制下方命令到 Claude Code/OpenCode/Antigravity**，无需手动 fetch 任何文档，永久生效。
 
 ## 一、获取凭证
@@ -55,7 +55,7 @@ claude mcp add agent-station --transport sse \\
 - URL: `https://你的域名/mcp/sse?api_key=你的API_KEY`
 > api_key 必须放在 URL 查询参数中，参数名为 `api_key`。
 
-## 三、所有可用工具（12 个，直接可用，无需 fetch）
+## 三、所有可用工具（6 个，直接可用，无需 fetch）
 
 ### 1. 日志类（5 个）
 
@@ -67,29 +67,14 @@ claude mcp add agent-station --transport sse \\
 | `read_log_detail` | 读取单篇日志完整正文（先用 read_logs/search_logs 拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
 | `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, total_tokens, by_agent{}, by_date{}, top_tags[]}` |
 
-### 2. 任务类（6 个）— 四态工作流
-
-| 工具 | 用途 | 关键参数 | 关键规则 |
-|------|------|----------|----------|
-| `create_task` | 创建任务（重名 409 拒绝） | title(必填), detail, tags[], status(默认待办), project | title 在你账号内唯一 |
-| `update_task` | 部分更新（status 变更自动记 history） | id 或 title 定位 + 字段名 + 新值 | 终态不可再改 |
-| `list_tasks` | 列任务（默认只回活跃四态） | status(""/all/多值), agent_name, project, tag, updated_since, limit/offset | 返回 `{total, items[]}` |
-| `get_task` | 单条完整详情（含 status_history） | id 或 title | 含完整状态流转历史 |
-| `close_task` | 归档收尾：置终态+存结论 | id/title, status(完成/废弃), result(必填) | 从默认视图自动隐藏 |
-| `delete_task` | 硬删（慎用） | id, confirm=true | 仅用于建错场景清理 |
-
-**四态状态机**：`待办 → 进行中 → 完成/废弃`
-**活跃态**（默认视图）：待办 → 进行中
-**终态**：完成 / 废弃（需带 result 结论）
-
-### 3. 通用类（1 个）
+### 2. 通用类（1 个）
 | 工具 | 用途 | 关键参数 | 返回示例 |
 |------|------|----------|----------|
 | `list_agents` | 列出有权限读取的 Agent | 无 | `{agents: [{name, display_name, agent_type, last_used_at}]}` |
 
 ## 四、使用建议（直接调用，无需思考）
 
-1. **每完成一个重要任务/会话结束前**，调用 `write_log` 记录：
+1. **每完成一项重要工作/会话结束前**，调用 `write_log` 记录：
    - 标题：一句概括做了什么
    - 内容：Markdown 格式，包含 背景/关键步骤/结果/踩坑
    - 标签：便于后续检索的关键词（含日期 YYYY-MM-DD）
@@ -98,70 +83,10 @@ claude mcp add agent-station --transport sse \\
 2. **需要回顾历史时**：
    - 按日期/Agent：`read_logs(start_date="2026-08-01", end_date="2026-08-31")`
    - 关键词搜索：`search_logs(query="docker", limit=20)`
-   - 任务进度：`list_tasks(status="进行中")` + `get_task(id="task-xxx")`
 
 
-4. **任务管理完整流程**（见伪代码）：
-   ```python
-   # 发现待办任务
-   tasks = await session.call_tool("list_tasks", {"status": "待办"})
-   for task in tasks["items"]:
-       # 标记进行中
-       await session.call_tool("update_task", {"id": task["id"], "status": "进行中"})
-       # 执行工作...
-       # 归档完成
-       await session.call_tool("close_task", {
-           "id": task["id"],
-           "status": "完成",
-           "result": "任务完成: 结果摘要"
-       })
-   ```
 
-## 五、Agent 定时轮询任务（管理员分派 + Agent 自动执行）
-
-本平台支持完整工作流：管理员在前端分派任务 → Agent 远端定时轮询 → 自动执行并归档。
-
-### Python 轮询伪代码
-```python
-import asyncio
-from mcp import ClientSession
-
-async def poll_and_execute():
-    async with ClientSession(...) as session:
-        # 1. 查询待办任务（自动按当前 API Key 对应的 Agent 过滤）
-        tasks = await session.call_tool("list_tasks", {"status": "待办"})
-
-        for task in tasks["items"]:
-            task_id = task["id"]
-            title = task["title"]
-
-            # 2. 标记为进行中
-            await session.call_tool("update_task", {"id": task_id, "status": "进行中"})
-
-            try:
-                # 3. 执行具体工作（此处替换为实际业务逻辑）
-                result = await do_work(task["detail"])
-
-                # 4. 归档完成，写入完成报告
-                await session.call_tool("close_task", {
-                    "id": task_id,
-                    "status": "完成",
-                    "result": f"任务完成: {result}"
-                })
-                print(f"任务 {title} 已完成")
-            except Exception as e:
-                await session.call_tool("close_task", {
-                    "id": task_id,
-                    "status": "废弃",
-                    "result": f"执行失败: {str(e)}"
-                })
-                print(f"任务 {title} 失败: {e}")
-
-# 部署建议：Linux 下用 systemd timer 或 cron 每小时运行
-# systemd timer 示例: OnCalendar=hourly
-```
-
-## 六、故障排查
+## 五、故障排查
 
 | 现象 | 处理 |
 |------|------|
@@ -214,7 +139,7 @@ claude mcp add agent-station --transport sse \\
 }
 新起 agy 会话生效
 
-## 可用工具一览 (12 个，直接用，无需 fetch)
+## 可用工具一览 (6 个，直接用，无需 fetch)
 
 ### 日志工具 (5 个)
 - write_log(title="xxx", content="xxx", tags=["2026-08-27", "关键词"])
@@ -223,34 +148,18 @@ claude mcp add agent-station --transport sse \\
 - read_log_detail(id="日志UUID")
 - get_stats(start_date="2026-08-01", end_date="2026-08-31")
 
-### 任务工具 (6 个)
-- create_task(title="xxx", detail="xxx", status="待办")
-- update_task(id="task-xxx", status="进行中")
-- list_tasks(status="进行中")  或 list_tasks(status="all") 查含归档
-- get_task(id="task-xxx")
-- close_task(id="task-xxx", status="完成", result="完成报告")
-- delete_task(id="task-xxx", confirm=true)
-
 ### 通用工具 (1 个)
 - list_agents()  列出可读 Agent 列表
 
 
 ## 标准操作流程
 
-### 写日志（每任务/阶段一条）
-1. write_log(title="任务名：一句话结果", content="背景+关键步骤+结果+踩坑", tags=["2026-08-27", "关键词1", "关键词2"], task_type="开发")
-
-### 任务管理（四态流转）
-1. 需求确认 → create_task(title="xxx", detail="背景+约束+方案", status="待办")
-2. 开工 → update_task(id="task-xxx", status="进行中")
-3. 执行工作...
-4. 收尾 → close_task(id="task-xxx", status="完成", result="一句话终态+关键数字+产物路径")
+### 写日志（每项工作/阶段一条）
+1. write_log(title="工作名：一句话结果", content="背景+关键步骤+结果+踩坑", tags=["2026-08-27", "关键词1", "关键词2"], task_type="开发")
 
 ### 查历史/检索
 - read_logs(agent_name="我的名字", start_date="2026-08-01")
 - search_logs(query="关键词")
-- list_tasks(status="进行中")
-- get_task(id="task-xxx")
 
 ## 故障处理
 - 401 → 检查 api_key 是否完整且含 sk-as- 前缀
@@ -259,8 +168,7 @@ claude mcp add agent-station --transport sse \\
 - 内容截断(30KB+) → 重试一次 通常即可
 
 ## 报到上下文恢复（召唤 Agent 后立即执行）
-1. list_tasks(status="进行中")  — 看我在干什么
-2. read_logs(limit=5)  — 看最近 5 条日志
+1. read_logs(limit=5)  — 看最近 5 条日志
 拼出"我在哪、正在干什么"即可。
 ```
 

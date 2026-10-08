@@ -1,6 +1,6 @@
 # Agent Station
 
-> **Self-hosted control center for your AI agent fleet** — one platform to log everything your agents do, manage tasks across every machine, and let agents talk via standard MCP.
+> **Self-hosted control center for your AI agent fleet** — one platform to log everything your agents do, and let agents talk via standard MCP.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](docker-compose.yml)
@@ -16,7 +16,6 @@ You run AI agents on **multiple machines** (laptop, workstation, HPC, cloud VMs)
 |---------|---------|
 | 🤯 Scattered logs | Each agent writes locally, no central view |
 | 🧠 Lost context | Session ends → history gone → start from zero |
-| 📋 No shared task board | Tasks assigned on machine A invisible on B |
 | 🔍 No unified search | "How did I fix this last time?" → grep only local |
 | 🔌 Fragmented interfaces | Every platform has its own reporting way |
 
@@ -28,15 +27,13 @@ You run AI agents on **multiple machines** (laptop, workstation, HPC, cloud VMs)
 
 ### For Humans (Web UI)
 - **📝 Markdown logs** — Full-text + phrase search, tags, calendar view
-- **✅ Task center** — Kanban (6 states) + table, drag-drop, filters, drawer edit, archive workflow
 - **🤝 Agent management** — Create accounts, rotate API keys, RBAC isolation
 - **🔐 Web login** — Admin / agent roles, cookie sessions
 
-### For Agents (MCP — 12 tools, one URL)
+### For Agents (MCP — 6 tools, one URL)
 | Domain | Tools |
 |--------|-------|
 | Logs | `write_log` `read_logs` `search_logs` `read_log_detail` `get_stats` |
-| Tasks (6-state) | `create_task` `update_task` `list_tasks` `get_task` `close_task` `delete_task` |
 | Agents | `list_agents` |
 
 **Dual-protocol MCP** at a single endpoint:
@@ -120,7 +117,7 @@ Verify: `claude mcp list` → shows ✓ Connected
 
 ## Agent Skill (Recommended)
 
-**MCP = toolbox, Skill = manual.** Skill (`SKILL.md`) teaches your agent when to use the 13 tools, so it logs and recovers context autonomously. Use both together.
+**MCP = toolbox, Skill = manual.** Skill (`SKILL.md`) teaches your agent when to use the 6 tools, so it logs and recovers context autonomously. Use both together.
 
 Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl https://your-host/api/v1/docs/skill-template`) → save as `~/.claude/skills/<name>/SKILL.md` → `/<name>` to test.
 
@@ -131,7 +128,6 @@ Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl 
 | Pattern | Description |
 |---------|-------------|
 | **Multi-machine → unified logs** | Agents on 3+ machines write to one searchable feed |
-| **Remote task dispatch** | Create task in UI → assign to agent → agent polls `list_tasks` → executes → archives |
 | **Cross-history search** | `search_logs(query="docker healthcheck", limit=20)` with phrase support |
 
 ---
@@ -165,8 +161,8 @@ curl https://your-host/api/v1/docs/skill-template  # Skill template
 ## Contributing
 
 PRs welcome. Good first issues:
-- LLM features: task title suggestions, log auto-tagging
-- Notifications: webhook / Slack / email on task transitions
+- LLM features: log title suggestions, log auto-tagging
+- Notifications: webhook / Slack / email on log events
 - Agent analytics dashboard
 - Export to Notion / Obsidian / static sites
 

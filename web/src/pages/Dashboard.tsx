@@ -1,18 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { FileText, Bot, KanbanSquare, TrendingUp, User, LayoutDashboard, ArrowRight, Activity } from 'lucide-react'
-import { markdownApi, tasksApi } from '../services/api'
+import { FileText, Bot, TrendingUp, LayoutDashboard, ArrowRight, Activity } from 'lucide-react'
+import { markdownApi } from '../services/api'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { clsx } from 'clsx'
-import { STATUS_COLOR, STATUS_ICON } from './Tasks/shared'
-
-const STATUS_LABEL: Record<string, string> = {
-  '待办': 'Todo',
-  '进行中': 'In Progress',
-  '完成': 'Done',
-  '废弃': 'Discarded',
-}
 
 function StatCard({ title, value, icon, accent }: { title: string; value: string | number; icon: React.ReactNode; accent: string }) {
   return (
@@ -42,14 +34,6 @@ export function Dashboard() {
       format(dateRange.end, 'yyyy-MM-dd')
     ),
   })
-
-  const { data: tasksData } = useQuery({
-    queryKey: ['dashboard-tasks'],
-    queryFn: () => tasksApi.list({ page_size: 5 }),
-  })
-
-  const activeTasks = tasksData?.items.filter(t => !['完成', '废弃'].includes(t.status)) ?? []
-  const totalActive = (tasksData?.total ?? 0) - (tasksData?.items.filter(t => ['完成', '废弃'].includes(t.status)).length ?? 0)
 
   const { data: recentLogs } = useQuery({
     queryKey: ['recent-logs'],
@@ -84,11 +68,10 @@ export function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard title="Total Logs" value={stats?.total_logs ?? 0} icon={<FileText className="h-5 w-5" />} accent="bg-gradient-to-r from-violet-500 to-indigo-500" />
         <StatCard title="Est. Tokens" value={stats?.total_tokens ? `${(stats.total_tokens/1000).toFixed(1)}k` : '0'} icon={<TrendingUp className="h-5 w-5" />} accent="bg-gradient-to-r from-blue-500 to-cyan-500" />
         <StatCard title="Agent Types" value={Object.keys(stats?.by_agent ?? {}).length} icon={<Bot className="h-5 w-5" />} accent="bg-gradient-to-r from-emerald-500 to-teal-500" />
-        <StatCard title="Active Tasks" value={totalActive} icon={<KanbanSquare className="h-5 w-5" />} accent="bg-gradient-to-r from-amber-500 to-orange-500" />
       </div>
 
       {/* Main grid */}
@@ -102,10 +85,6 @@ export function Dashboard() {
             <div className="mt-4 grid gap-2">
               <a href="/app/logs" className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm">
                 <span className="flex items-center gap-2"><FileText className="h-4 w-4 text-gray-500" />Browse Logs</span>
-                <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
-              </a>
-              <a href="/app/tasks" className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm">
-                <span className="flex items-center gap-2"><KanbanSquare className="h-4 w-4 text-gray-500" />Go to Tasks</span>
                 <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
               </a>
             </div>
@@ -135,7 +114,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Right: recent logs + tasks */}
+        {/* Right: recent logs */}
         <div className="space-y-6 lg:col-span-2">
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-5 py-3.5">
@@ -160,30 +139,6 @@ export function Dashboard() {
                 </a>
               ))}
               {!recentLogs?.items.length && <div className="p-10 text-center text-sm text-gray-400">No logs yet</div>}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-5 py-3.5">
-              <h2 className="text-sm font-semibold text-gray-900">Active Tasks</h2>
-              <a href="/app/tasks" className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700">View Tasks <ArrowRight className="h-3 w-3" /></a>
-            </div>
-            <div className="divide-y divide-gray-50">
-              {activeTasks.slice(0, 5).map((task) => {
-                const Icon = STATUS_ICON[task.status]
-                return (
-                  <a key={task.id} href="/app/tasks" className="group flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
-                    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1', STATUS_COLOR[task.status])}>
-                      <Icon className="h-3 w-3" />{STATUS_LABEL[task.status] ?? task.status}
-                    </span>
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{task.title}</p>
-                    <span className="hidden shrink-0 items-center gap-1 text-xs text-gray-500 sm:inline-flex">
-                      <User className="h-3 w-3" />{task.agent_name || '-'}
-                    </span>
-                  </a>
-                )
-              })}
-              {!activeTasks.length && <div className="p-10 text-center text-sm text-gray-400">No active tasks</div>}
             </div>
           </div>
         </div>
