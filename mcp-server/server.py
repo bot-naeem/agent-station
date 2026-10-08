@@ -200,7 +200,7 @@ async def get_stats(start_date: str = "", end_date: str = "", agent_name: str = 
         end_date: Range end "YYYY-MM-DD" (optional)
         agent_name: Optional exact agent name to count only that agent's output, e.g. "Umayar"
     Returns:
-        Stats object: total_logs, total_tokens, by_agent, by_date, top_tags
+        Stats object: total_logs, by_agent, by_date, top_tags
     """
     params: dict = {}
     if start_date.strip():

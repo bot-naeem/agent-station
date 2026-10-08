@@ -56,7 +56,6 @@ export interface MarkdownLog {
   front_matter: Record<string, any>
   title: string | null
   summary: string | null
-  tokens_estimate: number | null
   created_at: string
   updated_at: string
   content?: string
@@ -75,7 +74,6 @@ export interface MarkdownLogSearchParams {
 
 export interface MarkdownStats {
   total_logs: number
-  total_tokens: number
   total_chars: number
   by_agent: Record<string, number>
   by_date: Record<string, number>

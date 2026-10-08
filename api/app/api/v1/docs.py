@@ -65,7 +65,7 @@ claude mcp add agent-station --transport sse \\
 | `read_logs` | 读取最近日志列表（带 agent_name） | limit(默认10,max100), agent_name(可选), start_date, end_date | `{total, count, items[{id, title, log_date, tags}]}` |
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` |
 | `read_log_detail` | 读取单篇日志完整正文（先用 read_logs/search_logs 拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
-| `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, total_tokens, by_agent{}, by_date{}, top_tags[]}` |
+| `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, by_agent{}, by_date{}, top_tags[]}` |
 
 ### 2. 通用类（1 个）
 | 工具 | 用途 | 关键参数 | 返回示例 |

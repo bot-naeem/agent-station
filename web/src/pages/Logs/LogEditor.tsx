@@ -174,7 +174,7 @@ export function LogEditor() {
         </span>
         <span>{fmtDate(log.log_date)} {fmtTime(log.created_at)}</span>
         <span className="font-mono">{log.file_path}</span>
-        <span className="ml-auto tabular-nums">{words} characters · ≈{Math.ceil(words / 4)} tokens · ⌘S to save</span>
+        <span className="ml-auto tabular-nums">{words} characters · ⌘S to save</span>
       </div>
 
       {/* Mobile tab switch */}

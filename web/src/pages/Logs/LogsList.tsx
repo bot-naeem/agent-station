@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Search, Filter, Tag as TagIcon, Download, FileText, Clock, ChevronRight, ChevronLeft,
+  Search, Filter, Tag as TagIcon, Download, FileText, ChevronRight, ChevronLeft,
   X, Inbox, SlidersHorizontal, Sparkles, Users, CalendarDays, Pencil, Loader2,
 } from 'lucide-react'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -181,7 +181,6 @@ export function LogsList() {
     { label: 'Total Logs', value: String(data.total), icon: FileText, tone: 'bg-sky-50 text-sky-600' },
     { label: 'Today', value: String(data.items.filter(l => l.log_date === todayStr).length), icon: Sparkles, tone: 'bg-emerald-50 text-emerald-600' },
     { label: 'Active Agents', value: String(new Set(data.items.map(displayName)).size), icon: Users, tone: 'bg-violet-50 text-violet-600' },
-    { label: 'Total Tokens', value: `${(data.items.reduce((s, l) => s + (l.tokens_estimate || 0), 0) / 1000).toFixed(1)}k`, icon: Clock, tone: 'bg-amber-50 text-amber-600' },
   ] : []
 
   /* ------------------------------ Render ------------------------------ */
@@ -390,12 +389,6 @@ export function LogsList() {
                             <CalendarDays className="h-3 w-3" />
                             {fmtDate(log.log_date)} {fmtTime(log.created_at)}
                           </span>
-                          {!!log.tokens_estimate && log.tokens_estimate > 0 && (
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              ≈{log.tokens_estimate >= 1000 ? `${(log.tokens_estimate / 1000).toFixed(1)}k` : log.tokens_estimate} tokens
-                            </span>
-                          )}
                           {tags && tags.length > 0 && (
                             <span className="inline-flex flex-wrap items-center gap-1">
                               {tags.slice(0, 3).map(t => (
@@ -497,12 +490,6 @@ export function LogsList() {
                       <span className="font-medium text-gray-700">{name}</span>
                       <span>·</span>
                       <span>{fmtDate(selectedLog.log_date)} {format(new Date(selectedLog.created_at), 'HH:mm:ss')}</span>
-                      {!!selectedLog.tokens_estimate && selectedLog.tokens_estimate > 0 && (
-                        <>
-                          <span>·</span>
-                          <span>≈{selectedLog.tokens_estimate >= 1000 ? `${(selectedLog.tokens_estimate / 1000).toFixed(1)}k` : selectedLog.tokens_estimate} tokens</span>
-                        </>
-                      )}
                     </p>
                   </div>
                 </div>

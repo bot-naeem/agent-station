@@ -38,7 +38,6 @@ class MarkdownService:
         if payload.front_matter is not None:
             payload_fm = payload.front_matter.model_dump(exclude_none=True)
         front_matter = {**payload_fm, **parsed.get("front_matter", {})}
-        content_without_fm = parsed.get("content", payload.content)
 
         # 标题优先级：显式传入 > content 首个 # 标题 > front matter.title
         title = payload.title or parsed.get("title") or front_matter.get("title")
@@ -86,9 +85,6 @@ class MarkdownService:
         # 写入文件
         full_path.write_text(payload.content, encoding="utf-8")
 
-        # 估算 token
-        tokens_estimate = len(content_without_fm) // 4  # 粗略估算
-
         # 获取 agent_id
         agent_id = current_agent.id if current_agent else None
 
@@ -103,7 +99,6 @@ class MarkdownService:
             front_matter=front_matter,
             title=title,
             summary=parsed.get("summary"),
-            tokens_estimate=tokens_estimate,
         )
         self.db.add(markdown_log)
         await self.db.commit()
@@ -137,7 +132,6 @@ class MarkdownService:
             front_matter=log.front_matter,
             title=log.title,
             summary=log.summary,
-            tokens_estimate=log.tokens_estimate,
             created_at=log.created_at,
             updated_at=log.updated_at,
             content=content,
@@ -165,7 +159,6 @@ class MarkdownService:
             log.front_matter = parsed.get("front_matter", {})
             log.title = parsed.get("title") or log.title
             log.summary = parsed.get("summary") or log.summary
-            log.tokens_estimate = len(parsed.get("content", "")) // 4
 
             # 触发重新向量化
 

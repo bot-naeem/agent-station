@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 from uuid import UUID
-from sqlalchemy import String, Text, Date, Integer, Index, ForeignKey, UniqueConstraint
+from sqlalchemy import String, Text, Date, Index, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,7 +24,6 @@ class MarkdownLog(Base, UUIDMixin, TimestampMixin):
     front_matter: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     title: Mapped[str | None] = mapped_column(String(300), nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tokens_estimate: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     session: Mapped["Session"] = relationship("Session", back_populates="markdown_logs")
     

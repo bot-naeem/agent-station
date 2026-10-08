@@ -49,7 +49,6 @@ class MarkdownLogResponse(BaseModel):
     front_matter: dict
     title: Optional[str]
     summary: Optional[str]
-    tokens_estimate: Optional[int]
     created_at: datetime
     updated_at: datetime
 
@@ -66,7 +65,6 @@ class MarkdownLogListResponse(BaseModel):
     file_path: str
     title: Optional[str]
     summary: Optional[str]
-    tokens_estimate: Optional[int]
     created_at: datetime
 
 
@@ -94,7 +92,6 @@ class TagCount(BaseModel):
 
 class MarkdownStatsResponse(BaseModel):
     total_logs: int
-    total_tokens: int
     total_chars: int
     by_agent: dict[str, int]
     by_date: dict[str, int]

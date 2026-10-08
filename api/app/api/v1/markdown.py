@@ -230,7 +230,6 @@ async def get_markdown_stats(
     logs = result.scalars().all()
 
     total_logs = len(logs)
-    total_tokens = sum(l.tokens_estimate or 0 for l in logs)
     total_chars = sum(len(l.content) if hasattr(l, 'content') else 0 for l in logs)
 
     by_agent: dict[str, int] = {}
@@ -247,7 +246,6 @@ async def get_markdown_stats(
 
     return MarkdownStatsResponse(
         total_logs=total_logs,
-        total_tokens=total_tokens,
         total_chars=total_chars,
         by_agent=by_agent,
         by_date=by_date,
