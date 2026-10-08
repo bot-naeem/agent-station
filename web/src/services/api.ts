@@ -82,54 +82,6 @@ export interface MarkdownStats {
   top_tags: Array<{ tag: string; count: number }>
 }
 
-export interface Task {
-  id: string
-  agent_id: string
-  agent_name: string | null
-  title: string
-  status: '待办' | '进行中' | '完成' | '废弃'
-  detail: string | null
-  tags: string[]
-  project: string | null
-  result: string | null
-  status_history: Array<{ from: string | null; to: string; at: string }>
-  created_at: string
-  updated_at: string
-}
-
-export interface TaskListParams {
-  status?: string
-  agent_id?: string
-  project?: string
-  tag?: string
-  page?: number
-  page_size?: number
-}
-
-export interface TaskCreate {
-  title: string
-  detail?: string
-  status?: '待办' | '进行中' | '完成' | '废弃'
-  tags?: string[]
-  project?: string
-  agent_id?: string
-}
-
-export interface TaskCloseRequest {
-  id?: string
-  title?: string
-  status: '完成' | '废弃'
-  result?: string
-}
-
-export interface TaskListResponse {
-  items: Task[]
-  total: number
-  page: number
-  page_size: number
-  total_pages: number
-}
-
 // API 方法 - 所有方法直接返回数据（已解包 AxiosResponse）
 export const markdownApi = {
   create: async (data: { content: string; session_id?: string; agent_type: string; log_date?: string; front_matter?: any }) =>
@@ -263,23 +215,3 @@ export const authApi = {
     (await api.post('/auth/change-password', data)).data,
 }
 
-export const tasksApi = {
-  create: async (data: TaskCreate) =>
-    (await api.post<Task>('/tasks', data)).data,
-
-  list: async (params: TaskListParams) =>
-    (await api.get<TaskListResponse>('/tasks', { params })).data,
-
-  get: async (id: string) =>
-    (await api.get<Task>(`/tasks/${id}`)).data,
-
-  update: async (id: string, data: Partial<TaskCreate & { result?: string }>) =>
-    (await api.patch<Task>(`/tasks/${id}`, data)).data,
-
-  close: async (id: string, data: TaskCloseRequest) =>
-    (await api.post<Task>('/tasks/close', { ...data, id })).data,
-
-  delete: async (id: string) => {
-    await api.delete(`/tasks/${id}`)
-  },
-}
