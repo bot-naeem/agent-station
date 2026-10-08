@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Agent Station API",
-    description="Agent 日志管理、任务管理、博客发布平台",
+    description="Agent 日志管理、任务管理平台",
     version="0.1.0",
     lifespan=lifespan,
 )

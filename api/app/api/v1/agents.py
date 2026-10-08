@@ -64,6 +64,7 @@ async def create_agent(
         description=payload.description,
         agent_type=payload.agent_type or payload.name,
         api_key_hash=api_key_hash,
+        api_key_encrypted=Agent.encrypt_api_key(api_key),
         permissions=payload.permissions or ["read_all", "write_own"],
         readable_agent_ids=payload.readable_agent_ids or [],
         is_active=payload.is_active if payload.is_active is not None else True,
@@ -264,11 +265,30 @@ async def rotate_api_key(
     # Generate new key
     new_key = Agent.generate_api_key()
     agent.api_key_hash = Agent.hash_api_key(new_key)
+    agent.api_key_encrypted = Agent.encrypt_api_key(new_key)
     agent.set_plaintext_key(new_key)
     
     await db.commit()
     await db.refresh(agent)
     
+    return agent.to_dict(include_key=True)
+
+
+@router.get("/{agent_id}/key", response_model=AgentResponse)
+async def reveal_api_key(
+    agent_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_admin: AdminUser = Depends(get_current_admin),
+):
+    """Reveal agent's API key anytime (admin only)"""
+    result = await db.execute(select(Agent).where(Agent.id == agent_id))
+    agent = result.scalar_one_or_none()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    decrypted = agent.get_decrypted_key()
+    if not decrypted:
+        raise HTTPException(status_code=404, detail="Key not available, please rotate to generate a viewable key")
+    agent.set_plaintext_key(decrypted)
     return agent.to_dict(include_key=True)
 
 

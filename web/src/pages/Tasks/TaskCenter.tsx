@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
-  Plus, Search, LayoutGrid, Table2, Loader2, Inbox,
+  Plus, Search, LayoutGrid, Loader2, Inbox,
+  CheckCircle2, XCircle, ChevronRight,
   Archive, Pencil, Trash2, User, FolderKanban, X, AlertTriangle, Sparkles,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { tasksApi, agentApi, type Task } from '@/services/api'
-import { ALL_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, STATUS_LABEL, isFinal, type TaskStatus } from './shared'
+import { ALL_STATUSES, ACTIVE_STATUSES, FINAL_STATUSES, STATUS_BAR, STATUS_COLOR, STATUS_ICON, STATUS_LABEL, isFinal, type TaskStatus } from './shared'
 import { TaskFormModal } from './TaskFormModal'
 import { TaskDrawer } from './TaskDrawer'
 
@@ -312,6 +313,13 @@ export function TaskCenter() {
     staleTime: 60_000,
   })
 
+  // Dedicated query for archived tasks — always fresh after mutation
+  const { data: archiveData } = useQuery({
+    queryKey: ['tasks', 'archive'],
+    queryFn: () => tasksApi.list({ page_size: 200 }),
+    placeholderData: prev => prev,
+  })
+
   const allTasks = useMemo(() => data?.items ?? [], [data])
   const agents: AgentOption[] = (agentsData?.items ?? []).filter(a => a.is_active)
 
@@ -319,7 +327,6 @@ export function TaskCenter() {
   const [agentFilter, setAgentFilter] = useState('')
   const [projectFilter, setProjectFilter] = useState('')
   const [statusPill, setStatusPill] = useState<TaskStatus | '全部'>('全部')
-  const [view, setView] = useState<'kanban' | 'table'>('kanban')
 
   const projects = useMemo(
     () => Array.from(new Set(allTasks.map(t => t.project).filter(Boolean))) as string[],
@@ -331,14 +338,13 @@ export function TaskCenter() {
     return allTasks.filter(t => {
       if (agentFilter && t.agent_id !== agentFilter) return false
       if (projectFilter && t.project !== projectFilter) return false
-      if (view === 'table' && statusPill !== '全部' && t.status !== statusPill) return false
       if (kw) {
         const hay = `${t.title}\n${t.detail || ''}\n${t.tags.join(',')}\n${t.result || ''}`.toLowerCase()
         if (!hay.includes(kw)) return false
       }
       return true
     }).sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))
-  }, [allTasks, agentFilter, projectFilter, statusPill, view, keyword])
+  }, [allTasks, agentFilter, projectFilter, statusPill, keyword])
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { 全部: filtered.length }
@@ -347,22 +353,21 @@ export function TaskCenter() {
   }, [filtered])
 
   const grouped = useMemo(() =>
-    ALL_STATUSES.map(s => ({ status: s, items: filtered.filter(t => t.status === s) })),
+    ACTIVE_STATUSES.map(s => ({ status: s, items: filtered.filter(t => t.status === s) })),
   [filtered])
+
+  const [showArchive, setShowArchive] = useState<'done' | 'abandoned' | null>(null)
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
   const [drawerTask, setDrawerTask] = useState<Task | null>(null)
-  const [closing, setClosing] = useState<{ task: Task; status: TaskStatus } | null>(null)
+  
   const [deleting, setDeleting] = useState<Task | null>(null)
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null)
 
-  const openArchive = (task: Task, target?: TaskStatus) => {
-    setClosing({ task, status: target && isFinal(target) ? target : '完成' })
-    setDropTarget(null)
-  }
+  
 
   const updateStatus = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
@@ -375,7 +380,10 @@ export function TaskCenter() {
       return { prev }
     },
     onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(['tasks', 'board'], ctx.prev),
-    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['tasks', 'archive'] })
+    },
   })
 
   const handleDropColumn = (target: TaskStatus) => {
@@ -383,57 +391,57 @@ export function TaskCenter() {
     const task = allTasks.find(t => t.id === draggingId)
     setDraggingId(null)
     if (!task || task.status === target) return
-    if (isFinal(target)) return openArchive(task, target)
+    // Immediate update for all statuses (including Done/Abandoned)
     updateStatus.mutate({ id: task.id, status: target })
+    // If dropped to archive, auto-open that archive drawer
+    if (isFinal(target)) setShowArchive(target === '完成' ? 'done' : 'abandoned')
   }
 
   const hasActiveFilter = agentFilter || projectFilter || keyword
 
   return (
-    <div className="mx-auto max-w-7xl">
-      {/* Header — title + actions */}
-      <div className="mb-6 flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-gray-900">Tasks</h1>
-              <p className="text-sm text-gray-500">{filtered.length} total · {counts['进行中'] ?? 0} in progress</p>
-            </div>
-          </div>
-          <button
-            onClick={() => { setEditing(null); setFormOpen(true) }}
-            className="btn-primary inline-flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" />New Task
-          </button>
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-[calc(100vh-6rem)] flex flex-col">
+      {/* Header */}
+      <header className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tasks</h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {filtered.length} tasks · {counts['进行中'] ?? 0} in progress
+          </p>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setFormOpen(true) }}
+          className="btn-primary inline-flex items-center gap-2 shadow-sm whitespace-nowrap"
+        >
+          <Plus className="h-4 w-4" />
+          New Task
+        </button>
+      </header>
+
+      {/* Filter Bar */}
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            value={keyword}
+            onChange={e => setKeyword(e.target.value)}
+            placeholder="Search title, details, tags..."
+            className="w-full rounded-lg border-0 bg-gray-50 py-2.5 pl-10 pr-10 text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500"
+          />
+          {keyword && (
+            <button onClick={() => setKeyword('')} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-white hover:text-gray-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Filters bar — single clean row */}
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              value={keyword}
-              onChange={e => setKeyword(e.target.value)}
-              placeholder="Search title, details, tags..."
-              className="w-full rounded-full border-0 bg-gray-50 py-2 pl-9 pr-8 text-sm placeholder-gray-400 focus:bg-white focus:ring-1 focus:ring-gray-900"
-            />
-            {keyword && (
-              <button onClick={() => setKeyword('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-white hover:text-gray-600">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="h-6 w-px bg-gray-100 max-sm:hidden" />
-
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="h-6 w-px bg-gray-100" />
           <select
             value={agentFilter}
             onChange={e => setAgentFilter(e.target.value)}
-            className="rounded-full border-0 bg-gray-50 px-3.5 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-1 focus:ring-gray-900"
+            className="rounded-lg border-0 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-2 focus:ring-primary-500"
+            aria-label="Filter by agent"
           >
             <option value="">All Agents</option>
             {agents.map(a => <option key={a.id} value={a.id}>{a.display_name}</option>)}
@@ -442,227 +450,237 @@ export function TaskCenter() {
           <select
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
-            className="rounded-full border-0 bg-gray-50 px-3.5 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-1 focus:ring-gray-900"
+            className="rounded-lg border-0 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 focus:bg-white focus:ring-2 focus:ring-primary-500"
+            aria-label="Filter by project"
           >
             <option value="">All Projects</option>
             {projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-
-          {hasActiveFilter && (
-            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter('') }} className="text-sm text-gray-500 hover:text-gray-700">
-              Clear
-            </button>
-          )}
-
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex rounded-full bg-gray-100 p-1">
-              {([['kanban', LayoutGrid, 'Board'], ['table', Table2, 'Table']] as const).map(([v, Icon, label]) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={clsx(
-                    'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
-                    view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700',
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />{label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Status pills — segmented, light */}
-        <div className="flex flex-wrap items-center gap-2">
-          {(['全部', ...ALL_STATUSES] as const).map(s => {
-            const active = statusPill === s
-            const label = s === '全部' ? 'All' : STATUS_LABEL[s as TaskStatus]
-            return (
-              <button
-                key={s}
-                onClick={() => {
-                  if (s === '全部') { setStatusPill('全部'); return }
-                  setView('table')
-                  setStatusPill(active ? '全部' : s as TaskStatus)
-                }}
-                className={clsx(
-                  'inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
-                  s === '全部'
-                    ? clsx(active ? 'bg-gray-900 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50')
-                    : active
-                      ? 'bg-gray-900 text-white shadow-sm'
-                      : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
-                )}
-              >
-                {s !== '全部' && <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_BAR[s as TaskStatus])} />}
-                {label}
-                <span className={clsx('rounded-full px-1.5 py-0 text-[11px]', active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')}>
-                  {counts[s]}
-                </span>
-              </button>
-            )
-          })}
-          {statusPill !== '全部' && (
-            <button onClick={() => setStatusPill('全部')} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-gray-500 ring-1 ring-gray-200 hover:bg-gray-50">
-              <X className="h-3 w-3" />Clear
+        <div className="ml-auto flex items-center gap-2">
+          {hasActiveFilter && (
+            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter('') }} className="rounded-lg px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 whitespace-nowrap">
+              Clear filters
             </button>
           )}
         </div>
       </div>
 
-      {/* Content */}
-      {isLoading ? (
-        <div className="flex h-64 items-center justify-center gap-2 text-gray-400">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span className="text-sm">Loading tasks...</span>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex h-[40vh] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-white py-16">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
-            <Inbox className="h-7 w-7" />
-          </div>
-          <div className="text-center">
-            <p className="font-semibold text-gray-900">
-              {hasActiveFilter || (view === 'table' && statusPill !== '全部') ? 'No matching tasks' : 'No tasks yet'}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
-              {hasActiveFilter ? 'Try adjusting filters' : 'Create the first task to get started'}
-            </p>
-          </div>
-          {hasActiveFilter ? (
-            <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter(''); setStatusPill('全部') }} className="btn-secondary px-5 py-2 text-sm">
-              Clear Filters
+      {/* Active Status Tabs */}
+      <div className="mb-4 flex items-center gap-1 overflow-x-auto pb-2 px-1">
+        {ACTIVE_STATUSES.map(s => {
+          const active = statusPill === s
+          return (
+            <button
+              key={s}
+              onClick={() => setStatusPill(active ? '全部' : s)}
+              className={clsx(
+                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all',
+                active
+                  ? 'bg-gray-900 text-white shadow-sm'
+                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
+              )}
+            >
+              <span className={clsx('h-1.5 w-1.5 rounded-full', STATUS_BAR[s])} />
+              {STATUS_LABEL[s]}
+              <span className={clsx('rounded-full px-1.5 py-0 text-[11px]', active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')}>
+                {counts[s]}
+              </span>
             </button>
+          )
+        })}
+        <button
+          onClick={() => setStatusPill('全部')}
+          className={clsx(
+            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-all',
+            statusPill === '全部'
+              ? 'bg-gray-900 text-white shadow-sm'
+              : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
+          )}
+        >
+          All
+          <span className={clsx('rounded-full px-1.5 py-0 text-[11px]', statusPill === '全部' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500')}>
+            {counts['全部']}
+          </span>
+        </button>
+      </div>
+
+      {/* Content — full-height flex column */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Kanban area — fills remaining height, horizontal scroll */}
+        <div className="flex-1 min-h-0 -mx-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center gap-2 text-gray-400">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Loading tasks...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-white">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-gray-300">
+                <Inbox className="h-7 w-7" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-gray-900">
+                  {hasActiveFilter || statusPill !== '全部' ? 'No matching tasks' : 'No tasks yet'}
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {hasActiveFilter ? 'Try adjusting filters' : 'Create the first task to get started'}
+                </p>
+              </div>
+              {hasActiveFilter ? (
+                <button onClick={() => { setKeyword(''); setAgentFilter(''); setProjectFilter(''); setStatusPill('全部') }} className="btn-secondary px-5 py-2 text-sm">
+                  Clear Filters
+                </button>
+              ) : (
+                <button onClick={() => { setEditing(null); setFormOpen(true) }} className="btn-primary gap-1.5 px-5 py-2 text-sm">
+                  <Plus className="h-4 w-4" />New Task
+                </button>
+              )}
+            </div>
           ) : (
-            <button onClick={() => { setEditing(null); setFormOpen(true) }} className="btn-primary gap-1.5 px-5 py-2 text-sm">
-              <Plus className="h-4 w-4" />New Task
-            </button>
+            <div className="flex gap-4 min-w-max h-full items-start" onDragOver={e => e.preventDefault()}>
+              {grouped.map(({ status, items }) => (
+                <div
+                  key={status}
+                  onDragEnter={() => setDropTarget(status)}
+                  onDragLeave={e => {
+                    const el = e.currentTarget as HTMLElement
+                    if (!el.contains(e.relatedTarget as Node)) setDropTarget(prev => prev === status ? null : prev)
+                  }}
+                >
+                  <KanbanColumn
+                    status={status}
+                    tasks={items}
+                    isDropTarget={dropTarget === status}
+                    onDropColumn={handleDropColumn}
+                    cardProps={{
+                      draggingId, setDraggingId,
+                      onOpen: setDrawerTask,
+                      onEdit: t => { setEditing(t); setFormOpen(true); setDrawerTask(null) },
+                      onDelete: setDeleting,
+                      onCloseTask: t => {
+                        updateStatus.mutate({ id: t.id, status: '完成' })
+                        setShowArchive('done')
+                      },
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      ) : view === 'kanban' ? (
-        <div className="-mx-4 overflow-x-auto px-4 pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex gap-4" onDragOver={e => e.preventDefault()}>
-            {grouped.map(({ status, items }) => (
+
+        {/* Fixed bottom Archive Dock — always visible */}
+        <div className="mx-4 mb-4 grid grid-cols-2 gap-3 px-1 shrink-0">
+          {FINAL_STATUSES.map(s => {
+            const Icon = STATUS_ICON[s]
+            const count = archiveData?.items?.filter(t => t.status === s).length ?? 0
+            const active = showArchive === (s === '完成' ? 'done' : 'abandoned')
+            const isDone = s === '完成'
+            return (
               <div
-                key={status}
-                onDragEnter={() => setDropTarget(status)}
+                key={s}
+                role="button"
+                tabIndex={0}
+                onClick={() => setShowArchive(active ? null : isDone ? 'done' : 'abandoned')}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowArchive(active ? null : isDone ? 'done' : 'abandoned') } }}
+                onDragEnter={e => { e.preventDefault(); setDropTarget(s) }}
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
                 onDragLeave={e => {
                   const el = e.currentTarget as HTMLElement
-                  if (!el.contains(e.relatedTarget as Node)) setDropTarget(prev => prev === status ? null : prev)
+                  if (!el.contains(e.relatedTarget as Node)) setDropTarget(prev => prev === s ? null : prev)
                 }}
+                onDrop={e => { e.preventDefault(); handleDropColumn(s) }}
+                className={clsx(
+                  'flex cursor-pointer items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed px-4 py-3.5 text-sm font-medium transition-all',
+                  active
+                    ? clsx('border-solid text-white shadow-sm', isDone ? 'bg-emerald-500 border-emerald-500' : 'bg-gray-500 border-gray-500')
+                    : clsx(
+                        'border-gray-200 bg-white/40 text-gray-500 hover:border-gray-300 hover:bg-white hover:text-gray-700',
+                        dropTarget === s && (isDone ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-gray-400 bg-gray-100 text-gray-700'),
+                      ),
+                )}
               >
-                <KanbanColumn
-                  status={status}
-                  tasks={items}
-                  isDropTarget={dropTarget === status}
-                  onDropColumn={handleDropColumn}
-                  cardProps={{
-                    draggingId, setDraggingId,
-                    onOpen: setDrawerTask,
-                    onEdit: t => { setEditing(t); setFormOpen(true); setDrawerTask(null) },
-                    onDelete: setDeleting,
-                    onCloseTask: t => openArchive(t),
-                  }}
-                />
+                <Icon className={clsx('h-5 w-5', active && 'text-white')} />
+                <span className="font-medium">{STATUS_LABEL[s]}</span>
+                <span className={clsx('rounded-full px-2 py-0.5 text-xs tabular-nums font-semibold', active ? 'bg-white/20 text-white' : isDone ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600')}>
+                  {count}
+                </span>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50/80 backdrop-blur">
-                <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-4 py-3.5">Title</th>
-                  <th className="px-4 py-3.5">Agent</th>
-                  <th className="px-4 py-3.5">Project / Tags</th>
-                  <th className="px-4 py-3.5">Updated</th>
-                  <th className="px-4 py-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map(task => {
-                  const Icon = STATUS_ICON[task.status]
-                  const final = isFinal(task.status)
-                  return (
-                    <tr key={task.id} className="group cursor-pointer transition-colors hover:bg-gray-50" onClick={() => setDrawerTask(task)}>
-                      <td className="px-5 py-3">
-                        <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1', STATUS_COLOR[task.status])}>
-                          <Icon className="h-3 w-3" />{STATUS_LABEL[task.status]}
-                        </span>
-                      </td>
-                      <td className="max-w-[360px] px-4 py-3">
-                        <div className={clsx('truncate font-semibold text-gray-900', final && 'line-through decoration-gray-300')} title={task.title}>
-                          {task.title}
-                        </div>
-                        {task.detail && <div className="truncate text-xs text-gray-500">{task.detail.slice(0, 80)}</div>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-                            {(task.agent_name || '?').slice(0, 1).toUpperCase()}
-                          </span>
-                          {task.agent_name || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {task.project && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-2 py-1 text-xs font-medium text-white">
-                              <FolderKanban className="h-3 w-3 opacity-70" />{task.project}
+      </div>
+
+      {/* Archive Drawer — slides from right */}
+      {showArchive && (
+        <div className="fixed inset-y-0 right-0 z-30 flex w-full max-w-md flex-col border-l border-gray-200 bg-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+            <div className="flex items-center gap-2">
+              {showArchive === 'done' ? <CheckCircle2 className="h-5 w-5 text-emerald-500" /> : <XCircle className="h-5 w-5 text-gray-400" />}
+              <h2 className="text-base font-semibold text-gray-900">
+                {showArchive === 'done' ? 'Done' : 'Abandoned'}
+              </h2>
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs tabular-nums text-gray-600">
+                {archiveData?.items?.filter(t => t.status === (showArchive === 'done' ? '完成' : '废弃')).length ?? 0}
+              </span>
+            </div>
+            <button onClick={() => setShowArchive(null)} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {(() => {
+              const items = archiveData?.items?.filter(t => t.status === (showArchive === 'done' ? '完成' : '废弃')) ?? []
+              if (items.length === 0) {
+                return (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-gray-400">
+                    <Archive className="h-8 w-8 opacity-40" />
+                    <p>No tasks here yet</p>
+                    <p className="text-xs">Drag a card here to {showArchive === 'done' ? 'complete' : 'abandon'} it</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="space-y-2">
+                  {items.map(task => (
+                    <div
+                      key={task.id}
+                      onClick={() => setDrawerTask(task)}
+                      className="cursor-pointer rounded-xl border border-gray-100 bg-white p-3 transition-all hover:border-gray-200 hover:shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="line-clamp-2 text-sm font-semibold text-gray-900 line-through decoration-gray-300">
+                            {task.title}
+                          </div>
+                          {task.detail && (
+                            <div className="mt-0.5 line-clamp-1 text-xs text-gray-500">{task.detail}</div>
+                          )}
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+                            <span className="inline-flex items-center gap-1">
+                              <User className="h-3 w-3" />{task.agent_name || '-'}
                             </span>
-                          )}
-                          {task.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-200">{tag}</span>
-                          ))}
+                            {task.project && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                                <FolderKanban className="h-2.5 w-2.5 opacity-70" />{task.project}
+                              </span>
+                            )}
+                            <span>· {format(new Date(task.updated_at), 'MM/dd HH:mm')}</span>
+                          </div>
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
-                        {format(new Date(task.updated_at), 'MM/dd HH:mm')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100" onClick={e => e.stopPropagation()}>
-                          {!final && (
-                            <>
-                              <select
-                                value=""
-                                onChange={e => {
-                                  const v = e.target.value as TaskStatus
-                                  if (!v) return
-                                  if (isFinal(v)) openArchive(task, v)
-                                  else updateStatus.mutate({ id: task.id, status: v })
-                                }}
-                                className="cursor-pointer rounded-full border-0 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-white hover:ring-1 hover:ring-gray-200"
-                              >
-                                <option value="">Move ▸</option>
-                                {ALL_STATUSES.filter(s => s !== task.status && !isFinal(s)).map(s => (
-                                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                                ))}
-                                <option value="完成">→ Done</option>
-                                <option value="废弃">→ Abandoned</option>
-                              </select>
-                              <button title="Edit" onClick={() => { setEditing(task); setFormOpen(true) }} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500 ring-1 ring-gray-200 hover:bg-gray-50">
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                            </>
-                          )}
-                          <button title="Delete" onClick={() => setDeleting(task)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-400 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-3 text-xs text-gray-500">
-            {filtered.length} tasks
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         </div>
+      )}
+      {showArchive && (
+        <div onClick={() => setShowArchive(null)} className="fixed inset-0 z-20 bg-black/30" />
       )}
 
       {/* Modals */}
@@ -676,13 +694,11 @@ export function TaskCenter() {
         task={drawerTask}
         onClose={() => setDrawerTask(null)}
         onEdit={t => { setEditing(t); setFormOpen(true); setDrawerTask(null) }}
-        onCloseTask={t => openArchive(t)}
+        onCloseTask={t => {
+          updateStatus.mutate({ id: t.id, status: '完成' })
+          setShowArchive('done')
+        }}
         onDelete={setDeleting}
-      />
-      <CloseTaskModal
-        task={closing?.task ?? null}
-        status={closing?.status ?? null}
-        onClose={() => setClosing(null)}
       />
       <DeleteTaskModal task={deleting} onClose={() => setDeleting(null)} />
     </div>

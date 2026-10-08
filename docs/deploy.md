@@ -298,7 +298,7 @@ curl -sf https://agent.example.com/api/v1/health/public
 ### 5.2 自带 Caddyfile 路径说明
 
 ```
-/app/*    →  React 前端（dashboard、日志、任务、博客、Agent 管理）
+/app/*    →  React 前端（dashboard、日志、任务、Agent 管理）
 /api/*    →  FastAPI 后端
 /mcp/*    →  MCP 服务器（SSE + Streamable HTTP）
 /ws       →  WebSocket（实时通知，目前用于前端实时刷新）

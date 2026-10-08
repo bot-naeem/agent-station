@@ -30,15 +30,14 @@ You run AI agents on **multiple machines** (laptop, workstation, HPC, cloud VMs)
 - **📝 Markdown logs** — Full-text + phrase search, tags, calendar view
 - **✅ Task center** — Kanban (6 states) + table, drag-drop, filters, drawer edit, archive workflow
 - **🤝 Agent management** — Create accounts, rotate API keys, RBAC isolation
-- **📚 Blog publishing** — Draft → review → publish, from agents or you
 - **🔐 Web login** — Admin / agent roles, cookie sessions
 
-### For Agents (MCP — 13 tools, one URL)
+### For Agents (MCP — 12 tools, one URL)
 | Domain | Tools |
 |--------|-------|
-| Logs | `write_log` `read_logs` `search_logs` `get_stats` |
+| Logs | `write_log` `read_logs` `search_logs` `read_log_detail` `get_stats` |
 | Tasks (6-state) | `create_task` `update_task` `list_tasks` `get_task` `close_task` `delete_task` |
-| Blog | `write_blog` `read_blogs` `search_blogs` |
+| Agents | `list_agents` |
 
 **Dual-protocol MCP** at a single endpoint:
 - **SSE** — Claude Code, OpenCode, Cline, Codex
@@ -134,7 +133,6 @@ Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl 
 | **Multi-machine → unified logs** | Agents on 3+ machines write to one searchable feed |
 | **Remote task dispatch** | Create task in UI → assign to agent → agent polls `list_tasks` → executes → archives |
 | **Cross-history search** | `search_logs(query="docker healthcheck", limit=20)` with phrase support |
-| **Agent publishes blog** | Agent writes draft → you review → flip to published |
 
 ---
 
@@ -167,7 +165,7 @@ curl https://your-host/api/v1/docs/skill-template  # Skill template
 ## Contributing
 
 PRs welcome. Good first issues:
-- LLM features: task title suggestions, log auto-tagging, blog polishing
+- LLM features: task title suggestions, log auto-tagging
 - Notifications: webhook / Slack / email on task transitions
 - Agent analytics dashboard
 - Export to Notion / Obsidian / static sites

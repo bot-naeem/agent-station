@@ -35,6 +35,9 @@ class Agent(Base):
     
     # Hashed API key (never stored in plaintext)
     api_key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # Encrypted API key for admin view (reversible, view anytime)
+    api_key_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Agent type used in logs (defaults to name)
     agent_type: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -65,7 +68,6 @@ class Agent(Base):
     # Relationships
     sessions = relationship("Session", back_populates="agent", lazy="dynamic")
     markdown_logs = relationship("MarkdownLog", back_populates="agent", lazy="dynamic")
-    blog_posts = relationship("BlogPost", back_populates="agent", lazy="dynamic")
 
     __table_args__ = (
         Index("ix_agents_name_active", "name", "is_active"),
@@ -100,6 +102,36 @@ class Agent(Base):
     def generate_api_key() -> str:
         """Generate a new API key"""
         return f"sk-as-{secrets.token_urlsafe(32)}"
+
+    @staticmethod
+    def _fernet():
+        """Fernet with key derived from API_SECRET_KEY (32-byte sha256 -> base64)"""
+        import base64
+        from cryptography.fernet import Fernet
+        from app.core.config import get_settings
+        secret = get_settings().api_secret_key.encode()
+        digest = hashlib.sha256(secret).digest()
+        key = base64.urlsafe_b64encode(digest)
+        return Fernet(key)
+
+    @classmethod
+    def encrypt_api_key(cls, api_key: str) -> str:
+        """Encrypt API key for storage (reversible)"""
+        return cls._fernet().encrypt(api_key.encode()).decode()
+
+    @classmethod
+    def decrypt_api_key(cls, token: str) -> str:
+        """Decrypt stored API key"""
+        return cls._fernet().decrypt(token.encode()).decode()
+
+    def get_decrypted_key(self) -> Optional[str]:
+        """Get decrypted key if available, else None"""
+        if not getattr(self, 'api_key_encrypted', None):
+            return None
+        try:
+            return self.decrypt_api_key(self.api_key_encrypted)  # type: ignore[arg-type]
+        except Exception:
+            return None
 
     def verify_api_key(self, api_key: str) -> bool:
         """Verify provided API key against stored hash"""
