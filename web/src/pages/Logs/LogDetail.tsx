@@ -126,14 +126,6 @@ export function LogDetail() {
               <FileText className="h-3.5 w-3.5 text-gray-400" />
               {log.file_path}
             </span>
-            {!!log.tokens_estimate && log.tokens_estimate > 0 && (
-              <>
-                <span className="text-gray-300">·</span>
-                <span className="inline-flex items-center gap-1 text-gray-500">
-                  <Clock className="h-3.5 w-3.5" /> {log.tokens_estimate >= 1000 ? `${(log.tokens_estimate/1000).toFixed(1)}k` : log.tokens_estimate} tokens
-                </span>
-              </>
-            )}
             <span className="inline-flex items-center gap-1 text-gray-500">
               <CalendarDays className="h-3.5 w-3.5" /> {format(new Date(log.log_date), 'MMM dd, yyyy', { locale: enUS })}
             </span>
@@ -169,7 +161,6 @@ export function LogDetail() {
           {/* Footer */}
           <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-400">
             <span>Agent: {name} · {log.agent_type}</span>
-            <span>{log.tokens_estimate ? `≈${log.tokens_estimate} tokens` : ''}</span>
           </div>
         </div>
       </div>

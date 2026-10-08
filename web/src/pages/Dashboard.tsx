@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { FileText, Bot, TrendingUp, LayoutDashboard, ArrowRight, Activity } from 'lucide-react'
+import { FileText, Bot, LayoutDashboard, ArrowRight, Activity } from 'lucide-react'
 import { markdownApi } from '../services/api'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
@@ -68,9 +68,8 @@ export function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <StatCard title="Total Logs" value={stats?.total_logs ?? 0} icon={<FileText className="h-5 w-5" />} accent="bg-gradient-to-r from-violet-500 to-indigo-500" />
-        <StatCard title="Est. Tokens" value={stats?.total_tokens ? `${(stats.total_tokens/1000).toFixed(1)}k` : '0'} icon={<TrendingUp className="h-5 w-5" />} accent="bg-gradient-to-r from-blue-500 to-cyan-500" />
         <StatCard title="Agent Types" value={Object.keys(stats?.by_agent ?? {}).length} icon={<Bot className="h-5 w-5" />} accent="bg-gradient-to-r from-emerald-500 to-teal-500" />
       </div>
 
@@ -133,9 +132,6 @@ export function Dashboard() {
                     </p>
                     <p className="text-xs text-gray-500">{format(new Date(log.log_date), 'MMM dd, yyyy', { locale: enUS })}</p>
                   </div>
-                  <span className="hidden shrink-0 rounded-full bg-gray-50 px-2 py-1 text-xs text-gray-500 ring-1 ring-gray-100 sm:inline">
-                    {log.tokens_estimate ? `${(log.tokens_estimate / 1000).toFixed(1)}k` : ''}
-                  </span>
                 </a>
               ))}
               {!recentLogs?.items.length && <div className="p-10 text-center text-sm text-gray-400">No logs yet</div>}

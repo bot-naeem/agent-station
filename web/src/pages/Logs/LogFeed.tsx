@@ -126,12 +126,6 @@ function LogCard({ log, onView, onDelete }: { log: MarkdownLog; onView: (l: Mark
           <span className="inline-flex items-center gap-1">
             <CalendarDays className="h-3 w-3" /> {fmtDate(log.log_date)}
           </span>
-          {!!log.tokens_estimate && log.tokens_estimate > 0 && (
-            <>
-              <span>·</span>
-              <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{log.tokens_estimate >= 1000 ? `${(log.tokens_estimate / 1000).toFixed(1)}k` : log.tokens_estimate}</span>
-            </>
-          )}
           {tags.length > 0 && (
             <>
               <span>·</span>
@@ -249,14 +243,6 @@ function LogPreviewModal({ logId, onClose }: { logId: string | null; onClose: ()
                   <FileText className="h-3.5 w-3.5 text-gray-400" />
                   {log.file_path}
                 </span>
-                {!!log.tokens_estimate && log.tokens_estimate > 0 && (
-                  <>
-                    <span className="text-gray-300">·</span>
-                    <span className="inline-flex items-center gap-1 text-gray-500">
-                      <Clock className="h-3.5 w-3.5" /> {log.tokens_estimate >= 1000 ? `${(log.tokens_estimate/1000).toFixed(1)}k` : log.tokens_estimate} tokens
-                    </span>
-                  </>
-                )}
                 <span className="ml-auto inline-flex items-center gap-1.5 sm:hidden">
                   <button onClick={handleCopy} className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white">
                     {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? 'Copied' : 'Copy'}
