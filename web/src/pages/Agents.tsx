@@ -213,12 +213,12 @@ Start a new agy session (server supports dual protocol: same URL works for SSE a
 
 After connected, after each important task call write_log(title + content Markdown with Background/Steps/Result/Pitfalls, tags with YYYY-MM-DD), and use read_logs / search_logs to review history. When the user asks to clip/save an article, webpage or video transcript, fetch the full content first and call write_clip(title, content, source_url, source_type, summary, category, tags).`
 
- const skillSnippet = `Please install the Agent Station Skill (so you know when/how to use the 11 MCP tools).
+ const skillSnippet = `Please install the Agent Station Skill (so you know when/how to use the 11 MCP tools: 5 log tools + 5 clip tools + list_agents).
 
 1. web-fetch ${SKILL_TEMPLATE_URL}
-2. Fill section ① Identity (Name, Vibe, Creature...) and ③ Custom (your playbooks); keep ② Platform Protocol unchanged — it already contains all 11 tools
+2. Fill section ① Identity (Name, Vibe, Creature...) and ③ Custom (your playbooks); keep ② Platform Protocol unchanged — it already contains all 11 tools, including write_clip and the clipping rules for web articles / video transcripts
 3. Save as ~/.claude/skills/<name>/SKILL.md  (choose a short name, frontmatter "name" = slash command like /<name>)
-4. Verify: claude mcp list shows agent-station ✓ Connected, then /<name> — the skill will auto-call read_logs to recover context and enter standby.`
+4. Verify: claude mcp list shows agent-station ✓ Connected, then /<name> — the skill will auto-call read_logs to recover context and enter standby. When the user asks to clip/save a webpage, article or video transcript, fetch the full content first and call write_clip.`
 
  return (
   <Modal onClose={onClose} wide>
