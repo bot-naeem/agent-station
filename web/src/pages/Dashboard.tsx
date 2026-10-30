@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { FileText, Bot, LayoutDashboard, ArrowRight, Activity } from 'lucide-react'
-import { markdownApi } from '../services/api'
+import { FileText, Bot, LayoutDashboard, ArrowRight, Activity, Scissors } from 'lucide-react'
+import { clipApi, markdownApi } from '../services/api'
 import { format } from 'date-fns'
 import { enUS } from 'date-fns/locale'
 import { clsx } from 'clsx'
@@ -40,6 +40,11 @@ export function Dashboard() {
     queryFn: () => markdownApi.list({ page_size: 5 }),
   })
 
+  const { data: clipStats } = useQuery({
+    queryKey: ['clip-stats'],
+    queryFn: () => clipApi.stats(),
+  })
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
@@ -68,8 +73,9 @@ export function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Total Logs" value={stats?.total_logs ?? 0} icon={<FileText className="h-5 w-5" />} accent="bg-gradient-to-r from-violet-500 to-indigo-500" />
+        <StatCard title="Clips" value={clipStats?.total_clips ?? 0} icon={<Scissors className="h-5 w-5" />} accent="bg-gradient-to-r from-sky-500 to-blue-600" />
         <StatCard title="Agent Types" value={Object.keys(stats?.by_agent ?? {}).length} icon={<Bot className="h-5 w-5" />} accent="bg-gradient-to-r from-emerald-500 to-teal-500" />
       </div>
 
@@ -84,6 +90,10 @@ export function Dashboard() {
             <div className="mt-4 grid gap-2">
               <a href="/app/logs" className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm">
                 <span className="flex items-center gap-2"><FileText className="h-4 w-4 text-gray-500" />Browse Logs</span>
+                <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
+              </a>
+              <a href="/app/clips" className="group flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-white hover:shadow-sm">
+                <span className="flex items-center gap-2"><Scissors className="h-4 w-4 text-gray-500" />Browse Clips</span>
                 <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500" />
               </a>
             </div>

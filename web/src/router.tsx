@@ -4,6 +4,7 @@ import { LogFeed } from './pages/Logs/LogFeed'
 import { LogEditor } from './pages/Logs/LogEditor'
 import { LogDetail } from './pages/Logs/LogDetail'
 import { Agents } from './pages/Agents'
+import { ClipsList, ClipDetail, ClipEditor } from './pages/Clips'
 import { Login } from './pages/Login'
 import { Layout } from './components/Layout'
 import { AuthLayout } from './components/AuthLayout'
@@ -42,6 +43,30 @@ const agentsRoute = createRoute({
   component: Agents,
 })
 
+const clipsListRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/clips',
+  component: ClipsList,
+})
+
+const clipDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/clips/$clipId',
+  component: ClipDetail,
+})
+
+const clipEditorNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/clips/editor/new',
+  component: ClipEditor,
+})
+
+const clipEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/clips/editor/$clipId',
+  component: ClipEditor,
+})
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
@@ -54,6 +79,10 @@ const routeTree = rootRoute.addChildren([
   logEditorRoute,
   logDetailRoute,
   agentsRoute,
+  clipsListRoute,
+  clipDetailRoute,
+  clipEditorNewRoute,
+  clipEditorRoute,
   loginRoute,
 ])
 

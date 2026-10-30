@@ -1,8 +1,8 @@
-# Agent Station Skill 模板（v3 - 2026-08-27）
+# Agent Station Skill 模板（v4 - 2026-10-30）
 
 > **用法**：复制下方完整内容 → 替换 `① 人设定义区` 和 `③ 自定义区` → 保存为 `~/.claude/skills/<your-name>/SKILL.md` → 会话内用 `/<your-name>` 召唤。
 > 
-> **② 平台规范区已内置全部 6 个 MCP 工具定义，无需再 fetch，直接生效。**
+> **② 平台规范区已内置全部 11 个 MCP 工具定义，无需再 fetch，直接生效。**
 > 
 > **MCP 接入（一次性配置，永久生效）：**
 > ```bash
@@ -46,14 +46,14 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 
 ---
 
-# ② Agent Station 平台规范（PLATFORM PROTOCOL · 内置 6 个 MCP 工具，通用，勿改）
+# ② Agent Station 平台规范（PLATFORM PROTOCOL · 内置 11 个 MCP 工具，通用，勿改）
 
 ## 🔑 核心原则
 - **身份自动绑定 API Key**：你的身份 = 你的 API Key，调用工具时**绝不传 agent_name**，平台自动识别。
 - **权限隔离**：仅能读写自己账号下的日志（RBAC 自动控制）。
 - **所有工具已内置**：下方工具表直接可用，**无需再 fetch 文档**。
 
-## 📋 6 个 MCP 工具完整清单
+## 📋 11 个 MCP 工具完整清单
 
 ### 日志类（5 个）
 | 工具 | 用途 | 关键参数 | 返回 |
@@ -63,6 +63,15 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 | `search_logs` | 全文搜索历史日志（标题+摘要） | query(必填), agent_name, start_date, end_date, limit | `{total, count, items[]}` 完整数组 |
 | `read_log_detail` | 读取单篇日志完整正文（先拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
 | `get_stats` | 聚合统计 | start_date, end_date, agent_name(可选) | total_logs, by_agent, by_date, top_tags |
+
+### 剪藏类（5 个）
+| 工具 | 用途 | 关键参数 | 返回 |
+|------|------|----------|------|
+| `write_clip` | 保存一条网页/文章/视频文稿剪藏 | title(必填), content(必填, 完整正文/Markdown), source_url, source_type(web/video/note/other, 默认web), summary, category, tags[], cover_image | 创建的 clip ID |
+| `read_clips` | 读取剪藏列表（含 agent_name） | limit(默认10,max100), agent_name, category, source_type, status(默认published) | `{total, count, items[]}` 完整数组（不含正文） |
+| `search_clips` | 全文搜索剪藏（标题+摘要+正文） | query(必填), limit, agent_name, category, source_type | `{total, count, items[]}` 完整数组（不含正文） |
+| `read_clip_detail` | 读取单条剪藏完整正文（先拿 id） | id(必填) | 完整 clip 对象（含 content 全文） |
+| `get_clip_stats` | 剪藏库聚合统计 | 无 | total_clips, by_category, by_agent, by_source_type, top_tags |
 
 ### 通用类（1 个）
 | 工具 | 用途 | 关键参数 | 返回 |
@@ -83,6 +92,14 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 
 ## ✅ 上下文恢复规范
 - **报到时**：先 `read_logs`（最近 3~5 条），拼出"我在哪、正在干什么"。
+
+## ✂️ 剪藏规范（用户说“剪藏/收藏/clip 一下”时）
+- **先抓正文再存**：只给链接时，先抓取/阅读原文，提取主体内容；视频先拿到字幕或转写，再调用 `write_clip`。
+- **content 必须是完整内容**：Markdown 保留标题/列表/代码块/引用；不要只存链接或一句话。
+- **source_url 必填（能拿到时）**，`source_type` 按来源选 `web` / `video` / `note` / `other`。
+- **summary** 写 1~3 句摘要；**tags** 2~5 个关键词；**category** 可留空。
+- **去重**：剪藏前可先 `search_clips(query=主题关键词)`，避免重复存同一篇。
+- **回读**：列表/搜索只返回摘要，要看全文用 `read_clip_detail(id)`。
 
 ## 🛠 平台坑位备忘
 - `404 Could not find session` = 服务端重启，会话内 `/mcp` 重连或重启 claude 会话
@@ -128,7 +145,7 @@ description: 召唤 <你的Agent名> 上线。调用时：①读人设定位 ②
 ## ✅ 填模板检查清单
 - [ ] frontmatter 的 `name/description` 已改成本机 Agent 名
 - [ ] ① 区人设字段全部填写，口吻约定明确
-- [ ] ② 区**保持原样不改**（已内置完整 6 工具表）
+- [ ] ② 区**保持原样不改**（已内置完整 11 工具表）
 - [ ] ③ 区删掉不需要的 Playbooks，补上本机专属内容
 - [ ] 文件放到 `~/.claude/skills/<name>/SKILL.md`
 - [ ] 本机已完成 MCP 接入（见文首命令），`claude mcp list` 显示 ✓ Connected

@@ -68,6 +68,7 @@ class Agent(Base):
     # Relationships
     sessions = relationship("Session", back_populates="agent", lazy="dynamic")
     markdown_logs = relationship("MarkdownLog", back_populates="agent", lazy="dynamic")
+    clips = relationship("Clip", back_populates="agent", lazy="dynamic")
 
     __table_args__ = (
         Index("ix_agents_name_active", "name", "is_active"),

@@ -4,6 +4,7 @@ from app.models.markdown_log import MarkdownLog
 from app.models.todo import Todo
 from app.models.agent_log import AgentLog
 from app.models.agent import Agent, AgentPermission
+from app.models.clip import Clip
 from app.models.admin_user import AdminUser
 
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     "AgentLog",
     "Agent",
     "AgentPermission",
+    "Clip",
     "AdminUser",
 ]

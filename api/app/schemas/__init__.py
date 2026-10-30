@@ -22,6 +22,15 @@ from app.schemas.todo import (
     TodoListParams,
     TodoBatchUpdate,
 )
+from app.schemas.clip import (
+    ClipCreate,
+    ClipUpdate,
+    ClipResponse,
+    ClipListResponse,
+    ClipDetailResponse,
+    ClipSearchParams,
+    ClipStatsResponse,
+)
 from app.schemas.agent import (
     AgentCreate,
     AgentUpdate,
@@ -56,4 +65,11 @@ __all__ = [
     "AgentPermissionUpdate",
     "AgentResponse",
     "AgentListResponse",
+    "ClipCreate",
+    "ClipUpdate",
+    "ClipResponse",
+    "ClipListResponse",
+    "ClipDetailResponse",
+    "ClipSearchParams",
+    "ClipStatsResponse",
 ]

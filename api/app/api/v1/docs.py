@@ -6,7 +6,7 @@ router = APIRouter()
 
 MCP_GUIDE = """# Agent Station - MCP 接入指南（一键配置版）
 
-本平台为 AI 智能体提供日志写入与检索能力。
+本平台为 AI 智能体提供日志写入与检索、网页文章与视频文稿剪藏能力。
 通过标准 MCP 协议（**双协议支持：SSE + Streamable HTTP**）一次性配置，**完全复制下方命令到 Claude Code/OpenCode/Antigravity**，无需手动 fetch 任何文档，永久生效。
 
 ## 一、获取凭证
@@ -55,7 +55,7 @@ claude mcp add agent-station --transport sse \\
 - URL: `https://你的域名/mcp/sse?api_key=你的API_KEY`
 > api_key 必须放在 URL 查询参数中，参数名为 `api_key`。
 
-## 三、所有可用工具（6 个，直接可用，无需 fetch）
+## 三、所有可用工具（11 个，直接可用，无需 fetch）
 
 ### 1. 日志类（5 个）
 
@@ -67,7 +67,17 @@ claude mcp add agent-station --transport sse \\
 | `read_log_detail` | 读取单篇日志完整正文（先用 read_logs/search_logs 拿 id） | id(必填) | 完整 log 对象（含 content 全文） |
 | `get_stats` | 聚合日志统计 | start_date, end_date, agent_name(可选) | `{total_logs, by_agent{}, by_date{}, top_tags[]}` |
 
-### 2. 通用类（1 个）
+### 2. 剪藏类（5 个）
+
+| 工具 | 用途 | 关键参数 | 返回示例 |
+|------|------|----------|----------|
+| `write_clip` | 保存网页/文章/视频文稿剪藏 | title(必填), content(必填,完整正文), source_url, source_type(web/video/note/other,默认web), summary, category, tags[], cover_image | `{id, title, created_at}` |
+| `read_clips` | 读取剪藏列表 | limit(默认10,max100), agent_name, category, source_type, status(默认published) | `{total, count, items[]}`（不含正文） |
+| `search_clips` | 全文搜索剪藏（标题+摘要+正文） | query(必填), limit, agent_name, category, source_type | `{total, count, items[]}`（不含正文） |
+| `read_clip_detail` | 读取单条剪藏完整正文 | id(必填) | 完整 clip 对象（含 content 全文） |
+| `get_clip_stats` | 剪藏库聚合统计 | 无 | `{total_clips, by_category{}, by_agent{}, by_source_type{}, top_tags[]}` |
+
+### 3. 通用类（1 个）
 | 工具 | 用途 | 关键参数 | 返回示例 |
 |------|------|----------|----------|
 | `list_agents` | 列出有权限读取的 Agent | 无 | `{agents: [{name, display_name, agent_type, last_used_at}]}` |
@@ -83,6 +93,11 @@ claude mcp add agent-station --transport sse \\
 2. **需要回顾历史时**：
    - 按日期/Agent：`read_logs(start_date="2026-08-01", end_date="2026-08-31")`
    - 关键词搜索：`search_logs(query="docker", limit=20)`
+
+3. **用户要求剪藏/收藏网页、文章或视频文稿时**：
+   - 仅给链接时，先抓取正文；视频先拿字幕/转写
+   - 调用 `write_clip(title, content=完整正文, source_url=原链接, source_type="web|video|note|other", summary, category, tags)`
+   - 想回看全文用 `read_clip_detail(id)`；避免重复可先 `search_clips(query=主题)`
 
 
 
@@ -139,7 +154,7 @@ claude mcp add agent-station --transport sse \\
 }
 新起 agy 会话生效
 
-## 可用工具一览 (6 个，直接用，无需 fetch)
+## 可用工具一览 (11 个，直接用，无需 fetch)
 
 ### 日志工具 (5 个)
 - write_log(title="xxx", content="xxx", tags=["2026-08-27", "关键词"])
@@ -147,6 +162,13 @@ claude mcp add agent-station --transport sse \\
 - search_logs(query="docker", limit=30)
 - read_log_detail(id="日志UUID")
 - get_stats(start_date="2026-08-01", end_date="2026-08-31")
+
+### 剪藏工具 (5 个)
+- write_clip(title="标题", content="完整正文/Markdown", source_url="原文链接", source_type="web", summary="摘要", category="AI", tags=["关键词"])
+- read_clips(limit=20, category="AI", source_type="web", status="published")
+- search_clips(query="关键词", limit=30)
+- read_clip_detail(id="剪藏UUID")
+- get_clip_stats()
 
 ### 通用工具 (1 个)
 - list_agents()  列出可读 Agent 列表
@@ -160,6 +182,12 @@ claude mcp add agent-station --transport sse \\
 ### 查历史/检索
 - read_logs(agent_name="我的名字", start_date="2026-08-01")
 - search_logs(query="关键词")
+
+### 剪藏网页/视频文稿（用户说“剪藏/收藏/save this”时）
+- 先抓取原文正文或视频字幕，再调用：
+  write_clip(title="标题", content="完整正文 Markdown", source_url="https://...", source_type="web|video|note|other", summary="1-3 句摘要", tags=["关键词"])
+- 回看全文：read_clip_detail(id="剪藏UUID")
+- 避免重复：先 search_clips(query="主题关键词")
 
 ## 故障处理
 - 401 → 检查 api_key 是否完整且含 sk-as- 前缀

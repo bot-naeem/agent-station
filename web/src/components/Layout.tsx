@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { LayoutDashboard, List, Menu, X, Shield, LogIn, LogOut, KeyRound, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, List, Menu, X, Shield, LogIn, LogOut, KeyRound, ChevronDown, FileText } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { clsx } from 'clsx'
 import { authApi } from '../services/api'
@@ -7,6 +7,7 @@ import { authApi } from '../services/api'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Feed', href: '/logs', icon: List },
+  { name: 'Clips', href: '/clips', icon: FileText },
   { name: 'Agents', href: '/agents', icon: Shield },
 ]
 

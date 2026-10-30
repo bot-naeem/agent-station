@@ -80,6 +80,45 @@ export interface MarkdownStats {
   top_tags: Array<{ tag: string; count: number }>
 }
 
+export type ClipStatus = 'published' | 'draft' | 'archived'
+export type ClipSourceType = 'web' | 'video' | 'note' | 'other'
+
+export interface Clip {
+  id: string
+  agent_id: string | null
+  agent_name: string | null
+  title: string
+  summary: string | null
+  source_url: string | null
+  source_type: ClipSourceType
+  cover_image: string | null
+  category: string | null
+  tags: string[]
+  status: ClipStatus
+  created_at: string
+  updated_at: string
+  content?: string
+}
+
+export interface ClipSearchParams {
+  agent_name?: string
+  category?: string
+  tag?: string
+  source_type?: ClipSourceType
+  status?: ClipStatus
+  query?: string
+  page?: number
+  page_size?: number
+}
+
+export interface ClipStats {
+  total_clips: number
+  by_category: Record<string, number>
+  by_agent: Record<string, number>
+  by_source_type: Record<string, number>
+  top_tags: Array<{ tag: string; count: number }>
+}
+
 // API 方法 - 所有方法直接返回数据（已解包 AxiosResponse）
 export const markdownApi = {
   create: async (data: { content: string; session_id?: string; agent_type: string; log_date?: string; front_matter?: any }) =>
@@ -107,6 +146,27 @@ export const markdownApi = {
     return (await api.post('/markdown/batch-import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })).data
+  },
+}
+
+export const clipApi = {
+  create: async (data: Partial<Clip> & { title: string; content: string }) =>
+    (await api.post<Clip>('/clips', data)).data,
+
+  list: async (params: ClipSearchParams) =>
+    (await api.get<PaginatedResponse<Clip>>('/clips', { params })).data,
+
+  stats: async () =>
+    (await api.get<ClipStats>('/clips/stats')).data,
+
+  get: async (id: string) =>
+    (await api.get<Clip>(`/clips/${id}`)).data,
+
+  update: async (id: string, data: Partial<Clip>) =>
+    (await api.put<Clip>(`/clips/${id}`, data)).data,
+
+  delete: async (id: string) => {
+    await api.delete(`/clips/${id}`)
   },
 }
 

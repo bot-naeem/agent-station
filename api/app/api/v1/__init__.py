@@ -4,6 +4,7 @@ from app.api.v1.todos import router as todos_router
 from app.api.v1.agents import router as agents_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.docs import router as docs_router
+from app.api.v1.clips import router as clips_router
 
 __all__ = [
     "health_router",
@@ -12,4 +13,5 @@ __all__ = [
     "agents_router",
     "auth_router",
     "docs_router",
+    "clips_router",
 ]

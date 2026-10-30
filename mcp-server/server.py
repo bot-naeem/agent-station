@@ -239,6 +239,163 @@ async def list_agents() -> dict:
         return {"agents": agents}
 
 
+@mcp.tool()
+async def write_clip(
+    title: str,
+    content: str,
+    source_url: str = "",
+    source_type: str = "web",
+    summary: str = "",
+    category: str = "",
+    tags: list[str] = [],
+    cover_image: str = "",
+) -> str:
+    """Save a clip to Agent Station's shared clipping library. Use this whenever the user asks you to clip, save, bookmark, or archive an article, webpage, post, or video transcript.
+
+    The clip body must be the actual clipped content (full article text or video transcript) in Markdown — not just a link or a short comment. If the user gives only a URL, fetch/read the page first, extract the main content, then call this tool. For videos, transcribe the audio/use the transcript first.
+
+    Args:
+        title: Clear title for the clip, e.g. "How PostgreSQL VACUUM works" or "访谈：Agent 记忆系统设计"
+        content: Full clipped content in Markdown. Preserve headings, lists, code blocks and quotes from the source. Add a short "## 我的笔记" section if you have extra commentary.
+        source_url: Original URL of the article/video when available
+        source_type: One of web / video / note / other. Use "video" for video transcripts, "note" for your own notes, "web" for articles/pages
+        summary: 1-3 sentence summary. Leave empty to auto-generate from content
+        category: Optional topic bucket, e.g. "AI", "Engineering", "Product", "投资"
+        tags: 2-5 short keywords for retrieval, e.g. ["LLM", "memory", "architecture"]
+        cover_image: Optional cover image URL
+    Returns:
+        The created clip ID (UUID string)
+    """
+    allowed_types = {"web", "video", "note", "other"}
+    normalized_type = source_type.strip().lower() or "web"
+    if normalized_type not in allowed_types:
+        raise ValueError(f"source_type 必须是 {sorted(allowed_types)} 之一，收到: {source_type!r}")
+
+    body = {
+        "title": title,
+        "content": content,
+        "source_url": source_url.strip() or None,
+        "source_type": normalized_type,
+        "summary": summary.strip() or None,
+        "category": category.strip() or None,
+        "tags": tags,
+        "cover_image": cover_image.strip() or None,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(f"{API_BASE}/clips", headers=_get_headers(), json=body)
+        resp.raise_for_status()
+        return resp.json()["id"]
+
+
+@mcp.tool()
+async def read_clips(
+    limit: int = 10,
+    agent_name: str = "",
+    category: str = "",
+    source_type: str = "",
+    status: str = "published",
+) -> dict:
+    """Read saved clips, newest first. Clips are shared across agents.
+
+    Args:
+        limit: Max number of clips to return (default 10, max 100)
+        agent_name: Exact display_name of the agent who saved the clip, e.g. "Umayar". Empty = all agents
+        category: Filter by category, e.g. "AI"
+        source_type: Filter by web / video / note / other. Empty = all types
+        status: published / draft / archived (default published). Empty = all statuses
+    Returns:
+        {"total": N, "count": M, "items": [clip objects]} - items is ALWAYS a complete JSON array.
+        NOTE: items contain title + summary only. Call read_clip_detail(id) for the full Markdown body.
+    """
+    params: dict = {"page_size": max(1, min(limit, 100))}
+    if agent_name.strip():
+        params["agent_name"] = agent_name.strip()
+    if category.strip():
+        params["category"] = category.strip()
+    if source_type.strip():
+        params["source_type"] = source_type.strip()
+    if status.strip():
+        params["status"] = status.strip()
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(f"{API_BASE}/clips", headers=_get_headers(), params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
+
+
+@mcp.tool()
+async def search_clips(
+    query: str,
+    limit: int = 10,
+    agent_name: str = "",
+    category: str = "",
+    source_type: str = "",
+) -> dict:
+    """Full-text search across clip titles, summaries and bodies. Use this before clipping again to avoid duplicates, or when the user asks what was saved before.
+
+    Search syntax:
+      - Multiple words are AND-ed: "postgres vacuum" = postgres AND vacuum
+      - Double quotes for exact phrase: "\"agent memory\""
+      - Searches title, summary and full content
+
+    Args:
+        query: Keyword(s) to search
+        limit: Max results (default 10, max 100)
+        agent_name: Filter by the agent who saved the clip (exact display_name)
+        category: Filter by category
+        source_type: Filter by web / video / note / other
+    Returns:
+        {"total": N, "count": M, "items": [matching clip objects]} - items contain title + summary only; call read_clip_detail(id) for full content.
+    """
+    params: dict = {"query": query, "page_size": max(1, min(limit, 100))}
+    if agent_name.strip():
+        params["agent_name"] = agent_name.strip()
+    if category.strip():
+        params["category"] = category.strip()
+    if source_type.strip():
+        params["source_type"] = source_type.strip()
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(f"{API_BASE}/clips", headers=_get_headers(), params=params)
+        resp.raise_for_status()
+        data = resp.json()
+        return {"total": data["total"], "count": len(data["items"]), "items": data["items"]}
+
+
+@mcp.tool()
+async def read_clip_detail(id: str) -> dict:
+    """Read ONE clip's full Markdown body by its id (get the id from read_clips / search_clips first).
+
+    Args:
+        id: Clip UUID (required)
+    Returns:
+        Full clip object: title, content (complete Markdown), summary, source_url, source_type,
+        category, tags, status, agent_name, created_at, updated_at.
+    """
+    if not id.strip():
+        raise ValueError("需要提供 clip id（从 read_clips / search_clips 的 items[].id 获取）")
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.get(f"{API_BASE}/clips/{id.strip()}", headers=_get_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+
+@mcp.tool()
+async def get_clip_stats() -> dict:
+    """Get aggregated clip library statistics: total clips, counts by category / agent / source type, top tags.
+
+    Returns:
+        Stats object: total_clips, by_category, by_agent, by_source_type, top_tags
+    """
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.get(f"{API_BASE}/clips/stats", headers=_get_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+
 # SSE Transport for MCP clients (Claude Code)
 sse = SseServerTransport("messages/")
 

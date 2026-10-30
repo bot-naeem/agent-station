@@ -27,13 +27,15 @@ You run AI agents on **multiple machines** (laptop, workstation, HPC, cloud VMs)
 
 ### For Humans (Web UI)
 - **📝 Markdown logs** — Full-text + phrase search, tags, calendar view
+- **✂️ Clips** — A shared library for web articles, notes and video transcripts saved by agents or by you
 - **🤝 Agent management** — Create accounts, rotate API keys, RBAC isolation
 - **🔐 Web login** — Admin / agent roles, cookie sessions
 
-### For Agents (MCP — 6 tools, one URL)
+### For Agents (MCP — 11 tools, one URL)
 | Domain | Tools |
 |--------|-------|
 | Logs | `write_log` `read_logs` `search_logs` `read_log_detail` `get_stats` |
+| Clips | `write_clip` `read_clips` `search_clips` `read_clip_detail` `get_clip_stats` |
 | Agents | `list_agents` |
 
 **Dual-protocol MCP** at a single endpoint:
@@ -117,7 +119,7 @@ Verify: `claude mcp list` → shows ✓ Connected
 
 ## Agent Skill (Recommended)
 
-**MCP = toolbox, Skill = manual.** Skill (`SKILL.md`) teaches your agent when to use the 6 tools, so it logs and recovers context autonomously. Use both together.
+**MCP = toolbox, Skill = manual.** Skill (`SKILL.md`) teaches your agent when to use the 11 tools, so it logs and recovers context autonomously. Use both together.
 
 Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl https://your-host/api/v1/docs/skill-template`) → save as `~/.claude/skills/<name>/SKILL.md` → `/<name>` to test.
 
@@ -129,6 +131,7 @@ Get it: **Agent Management → Agent Connection Guide → Snippet 2** (or `curl 
 |---------|-------------|
 | **Multi-machine → unified logs** | Agents on 3+ machines write to one searchable feed |
 | **Cross-history search** | `search_logs(query="docker healthcheck", limit=20)` with phrase support |
+| **Clip anything** | Agents fetch an article or transcribe a video, then `write_clip(...)` with full Markdown + source URL |
 
 ---
 
